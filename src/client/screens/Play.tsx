@@ -61,12 +61,12 @@ const statusLine = (game: Game, coach: boolean): string => {
   if (game.repeat) return 'You already tested this arrangement.';
   if (game.tested && run) {
     const passed = run.rows.filter((r) => r.ok).length;
-    return `${passed} of ${run.rows.length} rows pass. Tap a row to see it on the board.`;
+    return `${passed} of ${run.rows.length} rows pass. Flip the switches to see why.`;
   }
   if (game.complete && game.liveRow) {
     return game.liveRow.ok
-      ? 'The live row passes. Power tests the rest.'
-      : 'The live row fails. Swap chips, or power to see every row.';
+      ? 'This row passes. Flip a switch to try another.'
+      : 'This row fails. Swap chips and watch the bulbs.';
   }
   const empty = board.sockets.length - game.placement.filter(Boolean).length;
   if (empty === board.sockets.length) return 'Drag a chip onto a socket, or tap one then the other.';
@@ -88,7 +88,7 @@ const coachHint = (game: Game): { zone: Zone; text: string } | null => {
   if (game.complete) {
     return {
       zone: 'power',
-      text: 'The live row is checked for free. Power tests every row and costs one charge.',
+      text: 'Tap a switch to try other rows for free. Power tests every row at once and costs one charge.',
     };
   }
   if (game.hand || game.armed !== null) {
@@ -181,6 +181,7 @@ export const Play = ({
           running={game.running}
           showVerdict={game.complete || game.showAnswer}
           onSocket={tap(game.tapSocket)}
+          onSwitch={game.running ? undefined : game.flip}
           dropTarget={drag?.over ?? null}
           lifted={drag?.from ?? null}
           onGrab={(event, chip, socket) => grab(event, chip, socket)}
@@ -193,7 +194,7 @@ export const Play = ({
           tested={game.tested}
           liveRow={game.liveRow}
           current={game.row}
-          canInspect={game.canInspect}
+          canInspect={!game.running}
           onInspect={game.inspect}
         />
       </div>

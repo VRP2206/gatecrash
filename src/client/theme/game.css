@@ -251,6 +251,17 @@ body {
   stroke-width: 1;
 }
 
+.switch {
+  cursor: pointer;
+  outline: none;
+}
+.switch[aria-disabled='true'] {
+  cursor: default;
+}
+.switch:focus-visible .switch-body {
+  stroke: var(--amber);
+  stroke-width: 2;
+}
 .switch-body {
   fill: var(--ic);
   stroke: var(--ic-edge);
@@ -547,14 +558,6 @@ body {
 .card-row:disabled {
   color: var(--silk);
 }
-.card-row.is-live {
-  --row-h: 30px;
-  background: var(--pcb-700);
-  border-color: var(--copper-dim);
-}
-.is-dense .card-row.is-live {
-  --row-h: 24px;
-}
 .card-row.is-current {
   border-color: var(--amber);
   background: var(--pcb-600);
@@ -564,16 +567,6 @@ body {
 }
 .card-row.is-ok {
   box-shadow: inset 3px 0 0 var(--ok);
-}
-.card-live {
-  padding: 0 var(--s1);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: var(--track-wide);
-  text-transform: uppercase;
-  color: var(--pcb-950);
-  background: var(--amber);
-  border-radius: var(--r1);
 }
 .card-ins,
 .card-outs {

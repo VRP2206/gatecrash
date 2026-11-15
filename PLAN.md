@@ -196,6 +196,8 @@ Server rules: reject `/api/power` if status is final; validate the placement aga
 > leaderboard and share line are per level. Chips have **their own pictogram and colour**, and
 > chips can be **dragged** from the tray to a socket and between sockets (tapping still works).
 
+Changes after the second hands-on test (15 Nov): wires are routed on a grid, one upright lane per net in each gap between columns, with a test that no two nets share a run across a year of boards. Switches can be flipped by hand for free; the single "live row" is gone and the test card highlights whichever row the switches are on. Checking every row by hand costs time, not charges.
+
 Dates assume evenings + weekends. Each phase ends with something uploaded and playable.
 **Rule for every phase:** `npm run check` (typecheck + lint + tests) passes before moving on,
 and the game is opened on a real phone in the Reddit app at least once.

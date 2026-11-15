@@ -44,7 +44,7 @@ export const HowTo = ({ chips, loggedIn, onBack, onPractice, onForgotten }: Prop
 
       <ol className="steps">
         <li>Seat a chip in every socket so the bulbs match the test card on every row.</li>
-        <li>One row is live: the board shows it for free while you work.</li>
+        <li>Tap a switch to flip it. The board shows what your chips do with that setting, for free.</li>
         <li>
           Power tests every row and costs a charge. You have {MAX_CHARGES}. Fewer charges, better
           score.

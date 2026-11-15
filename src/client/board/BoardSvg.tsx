@@ -8,6 +8,7 @@ import {
   PIN_SPREAD,
   SOCKET_H,
   SWITCH_H,
+  SWITCH_PAD,
   SWITCH_W,
   layoutBoard,
 } from './layout';
@@ -27,6 +28,8 @@ type Props = {
   /** Show tick/cross badges on the bulbs for this row. */
   showVerdict: boolean;
   onSocket: (socket: number) => void;
+  /** Flip a switch by hand; left out while a test is replaying. */
+  onSwitch?: ((index: number) => void) | undefined;
   /** Socket a dragged chip is hovering over. */
   dropTarget?: number | null;
   /** Socket whose chip is being dragged away. */
@@ -54,6 +57,7 @@ export const BoardSvg = ({
   running,
   showVerdict,
   onSocket,
+  onSwitch,
   dropTarget = null,
   lifted = null,
   onGrab,
@@ -110,7 +114,17 @@ export const BoardSvg = ({
       {layout.switches.map((p, i) => {
         const on = inputOn(board.inputs, i, row);
         return (
-          <g key={i} className={`switch ${on ? 'is-on' : ''}`}>
+          <g
+            key={i}
+            className={`switch ${on ? 'is-on' : ''}`}
+            role="switch"
+            tabIndex={onSwitch ? 0 : -1}
+            aria-checked={on}
+            aria-disabled={!onSwitch}
+            aria-label={`Switch ${i + 1}`}
+            onClick={onSwitch ? () => onSwitch(i) : undefined}
+            onKeyDown={onSwitch ? activate(() => onSwitch(i)) : undefined}
+          >
             <text className="designator" x={p.x} y={p.y - SWITCH_H / 2 - 5} textAnchor="middle">
               SW{i + 1}
             </text>
@@ -131,6 +145,13 @@ export const BoardSvg = ({
               rx={2}
             />
             {on && <circle className="switch-lamp" cx={p.x - SWITCH_W / 4 - 0.5} cy={p.y} r={2.4} />}
+            <rect
+              className="hit"
+              x={p.x - SWITCH_W / 2 - SWITCH_PAD}
+              y={p.y - SWITCH_H / 2 - SWITCH_PAD * 2}
+              width={SWITCH_W + SWITCH_PAD * 2}
+              height={SWITCH_H + SWITCH_PAD * 4}
+            />
           </g>
         );
       })}

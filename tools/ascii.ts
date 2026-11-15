@@ -31,7 +31,7 @@ export const renderBoard = (board: SolvedBoard, solutions: number, candidates: n
     let ins = '';
     for (let i = 0; i < board.inputs; i++) ins += inputOn(board.inputs, i, row) ? '1' : '0';
     const outs = board.target.map((mask) => ((mask >> row) & 1 ? '*' : '.')).join(' ');
-    lines.push(`            ${ins.padEnd(board.inputs + 1)}| ${outs}${row === board.probeRow ? '   <- live row' : ''}`);
+    lines.push(`            ${ins.padEnd(board.inputs + 1)}| ${outs}${row === board.probeRow ? '   <- starting row' : ''}`);
   }
   lines.push(`  winning placements: ${solutions}   legal placements: ${candidates}`);
   return lines.join('\n');

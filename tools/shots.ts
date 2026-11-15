@@ -96,7 +96,7 @@ const main = async () => {
     await page.locator('.tray-chip').first().click();
     await shot(page, '03-practice-holding', true);
     await place(page, TUTORIAL_BOARD, ['OR', 'AND']);
-    await shot(page, '04-practice-wrong-live-row', true);
+    await shot(page, '04-practice-wrong-row', true);
     await power(page);
     await shot(page, '05-practice-failed', true);
     await place(page, TUTORIAL_BOARD, ['AND', 'OR']);
@@ -115,6 +115,13 @@ const main = async () => {
     const win = solve(init.board).solutions[0];
     if (!win) throw new Error('no solution');
     await shot(page, '08-easy-empty', true);
+
+    // Flip a switch by hand: the row on the card follows it.
+    const sw = page.locator('.switch').nth(0);
+    const before = await sw.getAttribute('aria-checked');
+    await sw.click();
+    if ((await sw.getAttribute('aria-checked')) === before) problems.push('tapping a switch did not flip it');
+    await sw.click();
 
     // Drag the first chip of the answer from the tray onto socket 1.
     const firstChip = win[0];

@@ -2,7 +2,7 @@ import type { Board } from './types';
 
 /**
  * The practice board: two switches, two sockets, two bulbs, two chips.
- * BOTH belongs on top and EITHER below; the other way round fails the live row.
+ * BOTH belongs on top and EITHER below; the other way round fails the row the switches start on.
  */
 export const TUTORIAL_BOARD: Board = {
   day: 0,

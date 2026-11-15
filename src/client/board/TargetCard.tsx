@@ -7,10 +7,11 @@ type Props = {
   board: Board;
   /** Rows revealed by the last Power press, if the board still holds those chips. */
   tested: RowResult[] | null;
-  /** Free result for the live row with the chips on the board now. */
+  /** Free result for the row on the bench with the chips on the board now. */
   liveRow: RowResult | null;
-  /** Row currently shown on the board. */
+  /** Row the switches are set to. */
   current: number;
+  /** False while a test is replaying. */
   canInspect: boolean;
   onInspect: (row: number) => void;
 };
@@ -29,25 +30,24 @@ const describe = (board: Board, row: number): string => {
 /** The target: for every switch combination, which bulbs should be lit. */
 export const TargetCard = ({ board, tested, liveRow, current, canInspect, onInspect }: Props) => {
   const rows = rowCount(board.inputs);
-  const rest: number[] = [];
-  for (let r = 0; r < rows; r++) if (r !== board.probeRow) rest.push(r);
-  const columns = rest.length > 4 ? 2 : 1;
+  const all = Array.from({ length: rows }, (_, r) => r);
+  const columns = rows > 4 ? 2 : 1;
 
   const renderRow = (row: number) => {
-    const isLive = row === board.probeRow;
+    const isLive = row === current;
     const result = tested?.find((t) => t.row === row) ?? (isLive ? liveRow : null);
     const verdict = result ? (result.ok ? 'ok' : 'bad') : 'none';
     return (
       <button
         type="button"
-        className={`card-row is-${verdict} ${row === current ? 'is-current' : ''} ${isLive ? 'is-live' : ''}`}
-        disabled={!canInspect && !isLive}
+        className={`card-row is-${verdict} ${isLive ? 'is-current' : ''}`}
+        disabled={!canInspect}
+        aria-current={isLive}
         onClick={() => onInspect(row)}
         aria-label={`${describe(board, row)}. ${
-          result ? (result.ok ? 'Passes.' : 'Fails.') : isLive ? 'Live row.' : 'Not tested.'
-        }`}
+          result ? (result.ok ? 'Passes.' : 'Fails.') : 'Not tested.'
+        }${isLive ? ' On the board now.' : ''}`}
       >
-        {isLive && <span className="card-live">live</span>}
         <span className="card-ins">
           {Array.from({ length: board.inputs }, (_, i) => (
             <SwitchPip key={i} on={inputOn(board.inputs, i, row)} />
@@ -82,12 +82,11 @@ export const TargetCard = ({ board, tested, liveRow, current, canInspect, onInsp
         <span className="silk">Test card</span>
         <span className="card-key">switches set like this should light these bulbs</span>
       </header>
-      {renderRow(board.probeRow)}
       <ol
         className="card-rows"
-        style={{ '--rows': Math.ceil(rest.length / columns) } as CSSProperties}
+        style={{ '--rows': Math.ceil(rows / columns) } as CSSProperties}
       >
-        {rest.map((row) => (
+        {all.map((row) => (
           <li key={row}>{renderRow(row)}</li>
         ))}
       </ol>

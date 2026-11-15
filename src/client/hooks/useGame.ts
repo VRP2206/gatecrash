@@ -70,7 +70,12 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
       : null
   );
   const [pending, setPending] = useState(false);
-  const [inspect, setInspect] = useState<number | null>(null);
+  // Switch setting on the bench. Starts on the first row a restored test failed.
+  const [bench, setBench] = useState<number>(
+    () =>
+      (lastAttempt ? simulate(board, lastAttempt).find((r) => !r.ok)?.row : undefined) ??
+      board.probeRow
+  );
   const [error, setError] = useState<string | null>(null);
   const [nudge, setNudge] = useState<{ socket: number; at: number } | null>(null);
   const timer = useRef<number | null>(null);
@@ -143,7 +148,6 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     (chip: ChipType, socket: number) => {
       journey.start();
       setPlacement((now) => now.map((c, i) => (i === socket ? chip : c)));
-      setInspect(null);
       setError(null);
     },
     [journey]
@@ -188,7 +192,6 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
       }
       if (current !== null) {
         setPlacement((now) => now.map((c, i) => (i === socket ? null : c)));
-        setInspect(null);
         setArmed(null);
         return;
       }
@@ -221,7 +224,6 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
       });
       setHand(null);
       setArmed(null);
-      setInspect(null);
       setError(null);
     },
     [fits, journey, locked, placement, tray]
@@ -232,7 +234,6 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     (socket: number) => {
       if (locked) return;
       setPlacement((now) => now.map((c, i) => (i === socket ? null : c)));
-      setInspect(null);
     },
     [locked]
   );
@@ -242,7 +243,6 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     setPlacement(empty);
     setHand(null);
     setArmed(null);
-    setInspect(null);
   }, [empty, locked]);
 
   const complete = isComplete(board, placement);
@@ -255,10 +255,12 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     const attempt: FullPlacement = [...placement];
     setHand(null);
     setArmed(null);
-    setInspect(null);
     setError(null);
     setPending(true);
-    setRun({ attempt, rows: simulate(board, attempt), shown: 0, active: true });
+    const rows = simulate(board, attempt);
+    setRun({ attempt, rows, shown: 0, active: true });
+    // When the test is over, leave the switches on the first row that failed.
+    setBench((now) => rows.find((r) => !r.ok)?.row ?? now);
     journey.progress((state.attempts.length + 1) / MAX_CHARGES, 'power');
 
     session
@@ -302,18 +304,31 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     [board, shownPlacement]
   );
 
-  // Which row is on the bench: the one being replayed, one the player picked,
-  // the first failure of a finished test, or else the free live row.
-  const canInspect = (fresh && !running) || answerRows !== null;
-  const firstFail = fresh && !answerRows ? run?.rows.find((r) => !r.ok)?.row : undefined;
-  let row = board.probeRow;
-  if (running && run) row = Math.min(run.shown, run.rows.length - 1);
-  else if (canInspect) row = inspect ?? firstFail ?? board.probeRow;
+  // Which row is on the bench: the one being replayed, or the player's own switch setting.
+  const row = running && run ? Math.min(run.shown, run.rows.length - 1) : bench;
 
-  const liveRow = useMemo(() => simulate(board, shownPlacement)[board.probeRow] ?? null, [
+  const liveRow = useMemo(() => simulate(board, shownPlacement)[row] ?? null, [
     board,
+    row,
     shownPlacement,
   ]);
+
+  /** Set the switches to one row of the card. */
+  const inspect = useCallback(
+    (r: number) => {
+      if (!running) setBench(r);
+    },
+    [running]
+  );
+  /** Flip one switch by hand. Free: it only changes what the board shows. */
+  const flip = useCallback(
+    (index: number) => {
+      if (running) return;
+      journey.start();
+      setBench((now) => now ^ (1 << (board.inputs - 1 - index)));
+    },
+    [board.inputs, journey, running]
+  );
 
   return {
     board,
@@ -343,12 +358,10 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     run,
     tested,
     row,
-    /** Result of the free bench row for the chips on the board right now. */
+    /** Result of the row on the bench for the chips on the board right now. */
     liveRow: complete || showAnswer ? liveRow : null,
-    inspect: (r: number) => {
-      if (!running) setInspect(r);
-    },
-    canInspect,
+    inspect,
+    flip,
     error,
     dismissError: () => setError(null),
     reveal,

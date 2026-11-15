@@ -159,7 +159,7 @@ const everyInputMatters = (inputs: number, target: number[]): boolean => {
 const sortTray = (tray: ChipType[]): ChipType[] =>
   [...tray].sort((a, b) => CHIP_TYPES.indexOf(a) - CHIP_TYPES.indexOf(b));
 
-/** The row shown live on the bench: switches alternate on, off, on, off from the top. */
+/** The row the switches start on: alternating on, off, on, off from the top. */
 export const probeRowFor = (inputs: number): number => {
   let row = 0;
   for (let i = 0; i < inputs; i++) {

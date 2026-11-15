@@ -32,10 +32,11 @@ post appears in the community every day at midnight UTC.
 
    The pictures are two overlapping rings; the shaded part is when the chip is on.
 
-4. **Watch the live row.** One row of the card is wired to the bench for free: the board shows
-   its signals and whether its bulbs are right as you move chips around.
+4. **Flip the switches.** Tap a switch on the board (or a row of the card) to set the inputs.
+   The board shows the signals for that setting and whether its bulbs are right, for free.
+   Checking every row by hand is safe but slow, and the clock is running.
 5. **Press Power** to test every row. Each press costs one of your **5 charges**. Ticks and
-   crosses appear bulb by bulb; tap any row to see it on the board.
+   crosses appear bulb by bulb; the switches stop on the first row that failed.
 6. **All rows ticked: solved.** Out of charges: the fuse blows and you can look at a working
    arrangement. Either way you get a test report.
 

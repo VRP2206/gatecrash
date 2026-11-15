@@ -76,7 +76,7 @@ export type Board = {
   tray: ChipType[];
   /** Wanted truth table per bulb. */
   target: number[];
-  /** The row the bench shows live, before any charge is spent. */
+  /** The row the switches start on. Players can flip them freely after that. */
   probeRow: number;
 };
 
