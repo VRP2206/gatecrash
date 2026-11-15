@@ -111,3 +111,36 @@
     --hop: 1ms;
   }
 }
+
+/*
+ * Endless mode: the same bench under cold light. Indigo board, steel-blue
+ * traces that run cyan when live. Only colours change; sizes and motion stay.
+ */
+:root[data-theme='endless'] {
+  --pcb-950: #06061a;
+  --pcb-900: #0b0b25;
+  --pcb-800: #0f0f2e;
+  --pcb-700: #181840;
+  --pcb-600: #222256;
+  --pcb-500: #2f2f70;
+  --pcb-line: #3b3b88;
+
+  --copper-dead: #33355c;
+  --copper-dim: #5a69a8;
+  --copper: #7f9cf0;
+  --copper-hot: #a5f4ff;
+
+  --amber: #45e0ff;
+  --amber-deep: #1689b3;
+  --amber-glow: rgb(69 224 255 / 0.5);
+  --amber-haze: rgb(69 224 255 / 0.14);
+
+  --silk: #e9ecff;
+  --silk-dim: #aab1d8;
+  --silk-faint: #838bb8;
+
+  /* BOTH is cyan on the daily boards; here cyan is the live colour, so it turns gold. */
+  --chip-both: #ffc24a;
+
+  --shade: rgb(4 4 18 / 0.72);
+}

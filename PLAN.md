@@ -198,6 +198,8 @@ Server rules: reject `/api/power` if status is final; validate the placement aga
 
 Changes after the second hands-on test (15 Nov): wires are routed on a grid, one upright lane per net in each gap between columns, with a test that no two nets share a run across a year of boards. Switches can be flipped by hand for free; the single "live row" is gone and the test card highlights whichever row the switches are on. Checking every row by hand costs time, not charges.
 
+Endless mode (15 Nov): a weekly climb, reset Monday 00:00 UTC, same boards for everyone, in its own cold-light colour theme. Levels 1-25 have 2 switches, 26-75 have 3, 76 onward have 4; every stage of ten levels is a step up and the hard boards start around level 80 (recipes in `src/shared/endless.ts`). Nothing is timed. A failed test burns one of five charges per stage; a clearing test is free; a new stage refills. Burn all five and the fuse blows: back to the first level of the stage on fresh boards. Two leaderboards: new levels reached today, and highest level cleared this week. Logged-out players climb in their browser with no leaderboard. `npm run endless` plays it end to end and saves screenshots to `docs/shots/endless/`.
+
 Dates assume evenings + weekends. Each phase ends with something uploaded and playable.
 **Rule for every phase:** `npm run check` (typecheck + lint + tests) passes before moving on,
 and the game is opened on a real phone in the Reddit app at least once.

@@ -8,6 +8,7 @@ export type RedisLike = {
   get(key: string): Promise<string | undefined>;
   set(key: string, value: string, options?: { nx?: boolean }): Promise<string>;
   del(...keys: string[]): Promise<void>;
+  expire(key: string, seconds: number): Promise<void>;
   incrBy(key: string, value: number): Promise<number>;
   hGet(key: string, field: string): Promise<string | undefined>;
   hGetAll(key: string): Promise<Record<string, string>>;

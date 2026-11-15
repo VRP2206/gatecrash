@@ -43,6 +43,9 @@ export const createFakeRedis = (): RedisLike => {
         zsets.delete(key);
       }
     },
+    async expire() {
+      // the fake never forgets; expiry only matters on the real platform
+    },
     async incrBy(key, value) {
       const next = Number(strings.get(key) ?? '0') + value;
       strings.set(key, String(next));

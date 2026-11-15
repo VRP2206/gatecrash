@@ -2,6 +2,7 @@ import { Hono, type Context as HonoContext } from 'hono';
 import type { UiResponse } from '@devvit/web/shared';
 import type { ErrorResponse } from '../shared/api';
 import { asLevel, type Level } from '../shared/types';
+import { createEndless } from './endless';
 import { createGame, GameError } from './game';
 import type { Caller, Ports } from './ports';
 
@@ -44,6 +45,7 @@ const requireLevel = (value: unknown): Level => {
  */
 export const createApp = (ports: Ports, getCaller: () => Caller): Hono => {
   const game = createGame(ports);
+  const endless = createEndless(ports);
   const app = new Hono();
 
   app.onError((error, c) => {
@@ -97,6 +99,15 @@ export const createApp = (ports: Ports, getCaller: () => Caller): Hono => {
         asLevel(c.req.query('level')) ?? 'easy'
       )
     )
+  );
+
+  app.get('/api/endless', async (c) => c.json(await endless.view(getCaller())));
+  app.post('/api/endless/power', async (c) => {
+    const body = await readJson(c);
+    return c.json(await endless.power(getCaller(), requireDay(body.level), body.placement));
+  });
+  app.get('/api/endless/leaderboard', async (c) =>
+    c.json(await endless.leaderboard(getCaller(), c.req.query('scope') === 'week' ? 'week' : 'day'))
   );
 
   app.post('/internal/scheduler/daily-post', async (c) => {

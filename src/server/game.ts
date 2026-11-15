@@ -19,6 +19,7 @@ import {
   utcDayIndex,
   weekdayName,
 } from '../shared/day';
+import { publicBoard } from '../shared/endless';
 import { generate } from '../shared/generate';
 import {
   beatPercent,
@@ -33,7 +34,6 @@ import {
   LEVELS,
   MAX_CHARGES,
   NEW_DAY_STATE,
-  type Board,
   type DayState,
   type Level,
   type SolvedBoard,
@@ -58,19 +58,6 @@ const CLAIM_STALE_MS = 2 * 60_000;
 
 const isFinal = (state: DayState): boolean =>
   state.status === 'solved' || state.status === 'fused';
-
-const publicBoard = (board: SolvedBoard): Board => ({
-  day: board.day,
-  date: board.date,
-  level: board.level,
-  difficulty: board.difficulty,
-  inputs: board.inputs,
-  sockets: board.sockets,
-  bulbs: board.bulbs,
-  tray: board.tray,
-  target: board.target,
-  probeRow: board.probeRow,
-});
 
 const publicState = (state: DayState): DayState => ({
   status: state.status,

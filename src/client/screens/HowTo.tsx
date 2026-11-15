@@ -49,6 +49,10 @@ export const HowTo = ({ chips, loggedIn, onBack, onPractice, onForgotten }: Prop
           Power tests every row and costs a charge. You have {MAX_CHARGES}. Fewer charges, better
           score.
         </li>
+        <li>
+          Endless is a weekly climb with no clock. A failed test burns a charge; burn five in one
+          stage of ten levels and you drop back to the start of it.
+        </li>
       </ol>
 
       <h2 className="silk page-sub">The chips</h2>

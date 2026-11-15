@@ -1,5 +1,8 @@
 import type {
   ArchiveResponse,
+  EndlessLeaderboardResponse,
+  EndlessPowerResponse,
+  EndlessView,
   ErrorResponse,
   InitResponse,
   JoinResponse,
@@ -73,6 +76,11 @@ export const api = {
   archive: () => call<ArchiveResponse>('/api/archive'),
   leaderboard: (scope: 'day' | 'streak', day: number | null, level: Level) =>
     call<LeaderboardResponse>(query('/api/leaderboard', { scope, day, level })),
+  endless: () => call<EndlessView>('/api/endless'),
+  endlessPower: (level: number, placement: FullPlacement) =>
+    call<EndlessPowerResponse>('/api/endless/power', { level, placement }),
+  endlessLeaders: (scope: 'day' | 'week') =>
+    call<EndlessLeaderboardResponse>(query('/api/endless/leaderboard', { scope })),
 };
 
 export const messageOf = (error: unknown): string =>

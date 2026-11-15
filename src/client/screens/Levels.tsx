@@ -9,6 +9,7 @@ type Props = {
   streak: StreakView;
   loggedIn: boolean;
   onPick: (level: Level) => void;
+  onEndless: () => void;
   onArchive: () => void;
   onLeaders: () => void;
   onHelp: () => void;
@@ -37,6 +38,7 @@ export const Levels = ({
   streak,
   loggedIn,
   onPick,
+  onEndless,
   onArchive,
   onLeaders,
   onHelp,
@@ -98,6 +100,21 @@ export const Levels = ({
           </li>
         ))}
       </ol>
+
+      <button type="button" className="level level-endless" onClick={onEndless}>
+        <span className="level-pips" aria-hidden="true">
+          <span className="is-on" />
+          <span className="is-on" />
+          <span className="is-on" />
+        </span>
+        <span className="level-text">
+          <span className="display level-name">Endless</span>
+          <span className="level-blurb">A weekly climb. No clock: how high can you get?</span>
+        </span>
+        <span className="level-state">
+          <span className="level-go">climb</span>
+        </span>
+      </button>
 
       <p className="levels-foot">
         {loggedIn ? (

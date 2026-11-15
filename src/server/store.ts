@@ -10,6 +10,7 @@ import {
   type Level,
   type SolvedBoard,
 } from '../shared/types';
+import type { EndlessRun } from '../shared/endless';
 import type { RedisLike } from './ports';
 
 /*
@@ -30,6 +31,10 @@ import type { RedisLike } from './ports';
  *   lb:streak                 zset: score = current streak, member = uid
  *   streak:last               hash: uid -> last solved day (to drop lapsed runs from lb:streak)
  *   names                     hash: uid -> username
+ *   u:{uid}:endless           hash: one EndlessRun (week, level, burned, fuses, attempts, best, ...)
+ *   u:{uid}:elb               hash: endless boards the player is on, `w:{week}` / `d:{dayIndex}` -> 1
+ *   elb:w:{week}              zset: score = highest level cleared that week (+ earlier-is-better fraction)
+ *   elb:d:{dayIndex}          zset: score = levels gained that day (+ earlier-is-better fraction)
  */
 
 const num = (value: string | undefined | null, fallback = 0): number => {
@@ -66,6 +71,10 @@ const parseAttempts = (raw: string | undefined): FullPlacement[] => {
     return [];
   }
 };
+
+/** Endless leaderboards are kept a little past their week, then dropped. */
+const ENDLESS_TTL_SECONDS = 35 * 86_400;
+export type EndlessBoard = { kind: 'w' | 'd'; index: number };
 
 export type DaySummary = { status: GameStatus; charges: number };
 export type PostLink = { postId: string; threadId: string | null };
@@ -264,6 +273,61 @@ export const createStore = (redis: RedisLike) => {
       return rows.map((r) => ({ uid: r.member, score: r.score }));
     },
 
+    // --- endless mode ---------------------------------------------------------
+    async getEndless(uid: string): Promise<EndlessRun | null> {
+      const hash = await redis.hGetAll(`u:${uid}:endless`);
+      if (!hash.week) return null;
+      return {
+        week: num(hash.week),
+        level: Math.max(1, num(hash.level, 1)),
+        burned: num(hash.burned),
+        fuses: num(hash.fuses),
+        attempts: parseAttempts(hash.attempts),
+        best: num(hash.best),
+        dayIndex: num(hash.dayIndex),
+        dayBase: num(hash.dayBase),
+        record: num(hash.record),
+      };
+    },
+    async saveEndless(uid: string, run: EndlessRun): Promise<void> {
+      await redis.hSet(`u:${uid}:endless`, {
+        week: String(run.week),
+        level: String(run.level),
+        burned: String(run.burned),
+        fuses: String(run.fuses),
+        attempts: JSON.stringify(run.attempts),
+        best: String(run.best),
+        dayIndex: String(run.dayIndex),
+        dayBase: String(run.dayBase),
+        record: String(run.record),
+      });
+    },
+    /** Higher is better. Old boards expire on their own; the player's list of them is pruned here. */
+    async setEndlessScore(board: EndlessBoard, uid: string, score: number): Promise<void> {
+      const key = `elb:${board.kind}:${board.index}`;
+      await redis.zAdd(key, { member: uid, score });
+      await redis.expire(key, ENDLESS_TTL_SECONDS);
+      const mine = `u:${uid}:elb`;
+      await redis.hSet(mine, { [`${board.kind}:${board.index}`]: '1' });
+      const stale = Object.keys(await redis.hGetAll(mine)).filter((field) => {
+        const [kind, index] = field.split(':');
+        return kind === board.kind && num(index) < board.index - (kind === 'w' ? 5 : 35);
+      });
+      if (stale.length > 0) await redis.hDel(mine, stale);
+    },
+    async topEndless(board: EndlessBoard, limit: number): Promise<{ uid: string; score: number }[]> {
+      const rows = await redis.zRange(`elb:${board.kind}:${board.index}`, 0, limit - 1, {
+        by: 'rank',
+        reverse: true,
+      });
+      return rows.map((r) => ({ uid: r.member, score: r.score }));
+    },
+    async getEndlessRank(board: EndlessBoard, uid: string): Promise<{ rank: number | null; total: number }> {
+      const key = `elb:${board.kind}:${board.index}`;
+      const [rank, total] = await Promise.all([redis.zRank(key, uid), redis.zCard(key)]);
+      return { rank: rank === undefined ? null : total - rank, total };
+    },
+
     // --- people -------------------------------------------------------------
     async rememberName(uid: string, name: string): Promise<void> {
       await redis.hSet('names', { [uid]: name });
@@ -289,7 +353,16 @@ export const createStore = (redis: RedisLike) => {
         await redis.del(`u:${uid}:d:${boardId}`);
         await redis.zRem(`lb:${boardId}`, [uid]);
       }
-      await redis.del(`u:${uid}:days`, `u:${uid}:streak`, `u:${uid}:flags`);
+      for (const field of Object.keys(await redis.hGetAll(`u:${uid}:elb`))) {
+        await redis.zRem(`elb:${field}`, [uid]);
+      }
+      await redis.del(
+        `u:${uid}:days`,
+        `u:${uid}:streak`,
+        `u:${uid}:flags`,
+        `u:${uid}:endless`,
+        `u:${uid}:elb`
+      );
       await redis.zRem('lb:streak', [uid]);
       await redis.hDel('streak:last', [uid]);
       await redis.hDel('names', [uid]);

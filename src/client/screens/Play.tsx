@@ -19,6 +19,8 @@ type Props = {
   initial: DayState;
   session: Session;
   journey: Journey;
+  /** Wordmark in the header; the mode's name outside the daily boards. */
+  name?: string;
   /** Header line, e.g. "#12 · Wed 25 Nov". */
   title: string;
   tag?: string | null;
@@ -26,6 +28,8 @@ type Props = {
   elapsedAtOpen: number;
   /** Practice mode: coach marks, no clock. */
   coach?: boolean;
+  /** Endless mode: no clock, charges carry across boards, own wording. */
+  endless?: { burnedAtOpen: number; solved: string; fused: string; next: string; retry: string } | undefined;
   onReport: (state: DayState) => void;
   onHelp?: () => void;
   onMenu?: () => void;
@@ -46,15 +50,21 @@ const useClock = (running: boolean, base: number): number => {
 };
 
 /** The one line under the board that says what to do next. */
-const statusLine = (game: Game, coach: boolean): string => {
+const statusLine = (game: Game, coach: boolean, endless: Props['endless']): string => {
   const { board, state, run } = game;
   if (game.error) return game.error;
   if (game.running && run) {
     return `Testing row ${Math.min(run.shown + 1, run.rows.length)} of ${run.rows.length}. Tap the board to skip.`;
   }
-  if (state.status === 'solved') return coach ? 'Every row passes.' : 'Every row passes. Board cleared.';
+  if (state.status === 'solved') {
+    return endless ? endless.solved : coach ? 'Every row passes.' : 'Every row passes. Board cleared.';
+  }
   if (state.status === 'fused') {
-    return game.showAnswer ? 'One way to wire it.' : 'Out of charges. The fuse has blown.';
+    return game.showAnswer
+      ? 'One way to wire it.'
+      : endless
+        ? endless.fused
+        : 'Out of charges. The fuse has blown.';
   }
   if (game.hand) return `Tap a socket to seat ${CHIP_INFO[game.hand].label}.`;
   if (game.armed !== null) return `Pick a chip for socket U${game.armed + 1}.`;
@@ -108,15 +118,17 @@ export const Play = ({
   initial,
   session,
   journey,
+  name = 'Gatecrash',
   title,
   tag = null,
   elapsedAtOpen,
   coach = false,
+  endless,
   onReport,
   onHelp,
   onMenu,
 }: Props) => {
-  const game = useGame({ board, initial, session, journey });
+  const game = useGame({ board, initial, session, journey, burnedAtOpen: endless?.burnedAtOpen });
   // The report is offered once the last test has finished replaying.
   const done = game.final && !game.running && !game.pending ? game.state : null;
   const beat = useBeat();
@@ -125,31 +137,32 @@ export const Play = ({
     onDrop: game.drop,
     onReturn: game.lift,
   });
-  const ticking = !coach && game.state.status === 'playing';
+  const timed = !coach && !endless;
+  const ticking = timed && game.state.status === 'playing';
   const clock = useClock(ticking, elapsedAtOpen);
   const seconds = game.final ? secondsTaken(game.state) : clock;
   const hint = coach ? coachHint(game) : null;
-  const status = statusLine(game, coach);
+  const status = statusLine(game, coach, endless);
   const wide = rowCount(board.inputs) > 8;
 
   return (
     <main className={`play ${wide ? 'is-dense' : ''} ${coach ? 'is-coach' : ''}`}>
       <header className="bar">
         <div className="bar-title">
-          <span className="display bar-name">Gatecrash</span>
+          <span className="display bar-name">{name}</span>
           <span className="bar-day">
             {title}
             {tag && <span className="bar-tag">{tag}</span>}
           </span>
         </div>
         <div className="bar-tools">
-          {!coach && (
+          {timed && (
             <span className="bar-clock" aria-label={`Time ${formatTime(seconds)}`}>
               {formatTime(seconds)}
             </span>
           )}
           {onMenu && (
-            <button type="button" className="icon-btn" onClick={onMenu} aria-label="All of today's boards">
+            <button type="button" className="icon-btn" onClick={onMenu} aria-label={endless ? 'Endless overview' : "All of today's boards"}>
               <svg viewBox="0 0 16 16" aria-hidden="true" className="glyph glyph-line">
                 <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />
               </svg>
@@ -247,7 +260,13 @@ export const Play = ({
               </button>
             )}
             <button type="button" className="btn btn-report" onClick={() => onReport(done)}>
-              {coach ? "Play today's board" : 'See report'}
+              {endless
+                ? done.status === 'solved'
+                  ? endless.next
+                  : endless.retry
+                : coach
+                  ? "Play today's board"
+                  : 'See report'}
             </button>
           </div>
         ) : (

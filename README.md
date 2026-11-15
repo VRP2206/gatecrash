@@ -40,6 +40,17 @@ post appears in the community every day at midnight UTC.
 6. **All rows ticked: solved.** Out of charges: the fuse blows and you can look at a working
    arrangement. Either way you get a test report.
 
+### Endless mode
+
+Under the three daily boards is **Endless**: a weekly climb in its own colours, with no clock.
+
+- Level 1 is a warm-up. Every ten levels is a new stage and a step up. Levels 1-25 have two
+  switches, 26-75 three, and from 76 four, which is where the hard boards begin.
+- Each stage comes with five charges. A failed test burns one; a test that clears the board is
+  free. Burn all five and the fuse blows: you drop to the first level of the stage, on new boards.
+- Two leaderboards: new levels reached **today**, and the highest level cleared **this week**.
+  Everyone starts again from level 1 on Monday, 00:00 UTC.
+
 No electronics knowledge is needed, and nothing on screen uses engineering terms.
 
 ### Three boards a day

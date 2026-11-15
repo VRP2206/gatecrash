@@ -18,10 +18,11 @@
 - `npm run dev:local` — the whole game against an in-memory Redis/Reddit at http://localhost:5173 (no Reddit login needed).
 - `npm run dev` — `devvit playtest` in the real test subreddit (needs `npm run login` once).
 - `npm run board -- --day 12 --count 5` — print boards as text. `npm run stats -- --days 60` — difficulty spread.
+- `npm run endless` — a bot climbs endless mode to level 150, then a headless phone plays it through the UI; screenshots into `docs/shots/endless/`.
 - `npm run shots` — screenshots of every screen at 360x640 and desktop into `docs/shots/`.
 
 ## Layout
-- `src/shared` engine (types, rng, sim, solve, generate, day, score, streak) and the API types in `api.ts`.
+- `src/shared` engine (types, rng, sim, solve, generate, day, score, streak, endless) and the API types in `api.ts`.
 - `src/server` `app.ts` builds the Hono routes from injected ports; `game.ts` holds the rules;
   `store.ts` is the only Redis user; `reddit.ts` the only Reddit API user; `index.ts` wires the real platform.
 - `src/client` `splash.*` is the inline post (no React, loads fast); `game.*` is the expanded React app.

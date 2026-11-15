@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { utcDayIndex } from '../../shared/day';
+import { generateEndless } from '../../shared/endless';
 import { generate } from '../../shared/generate';
 import { TUTORIAL_BOARD } from '../../shared/tutorial';
 import { LEVELS } from '../../shared/types';
@@ -95,6 +96,10 @@ describe('board layout', () => {
     for (let day = 1; day <= 365; day++) {
       for (const level of LEVELS) boards.push(generate({ day, dayIndex: EPOCH + day - 1, level }));
     }
+    // Endless boards grow past the daily ones: check three weeks of a 200-level climb too.
+    for (let week = 2968; week < 2971; week++) {
+      for (let level = 1; level <= 200; level++) boards.push(generateEndless({ week, level, retry: 0 }));
+    }
     const flat = (a: Point, b: Point) => Math.abs(a.y - b.y) < 0.01;
     const upright = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.01;
     const shared = (a0: number, a1: number, b0: number, b1: number) =>
@@ -102,7 +107,7 @@ describe('board layout', () => {
     const clashes: string[] = [];
     for (const board of boards) {
       const layout = layoutBoard(board);
-      const label = `day ${board.day} ${board.level}`;
+      const label = `${board.date ? 'day' : 'endless'} ${board.day} ${board.level}`;
       layout.wires.forEach((one, i) =>
         layout.wires.forEach((two, j) => {
           if (i >= j) return;

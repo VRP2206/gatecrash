@@ -49,9 +49,14 @@ type Options = {
   initial: DayState;
   session: Session;
   journey: Journey;
+  /**
+   * Endless mode: charges already burned in this stage when the board opened.
+   * There, only failed tests cost a charge and the count carries across boards.
+   */
+  burnedAtOpen?: number | undefined;
 };
 
-export const useGame = ({ board, initial, session, journey }: Options) => {
+export const useGame = ({ board, initial, session, journey, burnedAtOpen }: Options) => {
   const empty = useMemo<Placement>(() => board.sockets.map(() => null), [board]);
   const lastAttempt = initial.attempts[initial.attempts.length - 1];
 
@@ -247,7 +252,14 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
 
   const complete = isComplete(board, placement);
   const repeat = complete && state.attempts.some((a) => same(a, placement));
-  const used = state.attempts.length + (pending ? 1 : 0);
+  const spent =
+    burnedAtOpen === undefined
+      ? state.attempts.length
+      : burnedAtOpen +
+        state.attempts.length -
+        initial.attempts.length -
+        (state.status === 'solved' ? 1 : 0);
+  const used = spent + (pending ? 1 : 0);
   const canPower = complete && !locked && !repeat && used < MAX_CHARGES;
 
   const power = useCallback(() => {
@@ -261,7 +273,7 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     setRun({ attempt, rows, shown: 0, active: true });
     // When the test is over, leave the switches on the first row that failed.
     setBench((now) => rows.find((r) => !r.ok)?.row ?? now);
-    journey.progress((state.attempts.length + 1) / MAX_CHARGES, 'power');
+    journey.progress(Math.min(1, (state.attempts.length + 1) / MAX_CHARGES), 'power');
 
     session
       .power(attempt)

@@ -13,6 +13,7 @@ import { api } from './api';
 import { useJourney } from './hooks/useJourney';
 import { useLoad } from './hooks/useLoad';
 import { Archive } from './screens/Archive';
+import { Endless } from './screens/Endless';
 import { HowTo } from './screens/HowTo';
 import { Leaders } from './screens/Leaders';
 import { Levels } from './screens/Levels';
@@ -20,7 +21,15 @@ import { Play } from './screens/Play';
 import { Result } from './screens/Result';
 import { guestKey, localSession, readGuestState, remoteSession } from './session';
 
-type View = 'levels' | 'play' | 'practice' | 'result' | 'archive' | 'leaders' | 'howto';
+type View =
+  | 'levels'
+  | 'play'
+  | 'practice'
+  | 'result'
+  | 'archive'
+  | 'leaders'
+  | 'howto'
+  | 'endless';
 
 const TUTORIAL_KEY = 'gatecrash:practice-done';
 
@@ -199,6 +208,7 @@ export const App = () => {
           streak={init.streak}
           loggedIn={init.loggedIn}
           onPick={(level) => enter(init.day, level)}
+          onEndless={() => open('endless')}
           onArchive={() => open('archive')}
           onLeaders={() => open('leaders')}
           onHelp={() => open('howto')}
@@ -223,6 +233,15 @@ export const App = () => {
           onBoard={() => show('play')}
           onArchive={() => open('archive')}
           onLeaders={() => open('leaders')}
+        />
+      );
+    case 'endless':
+      return (
+        <Endless
+          loggedIn={init.loggedIn}
+          journey={journey}
+          onBack={() => show('levels')}
+          onHelp={() => open('howto')}
         />
       );
     case 'archive':

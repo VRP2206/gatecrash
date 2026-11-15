@@ -8,6 +8,8 @@
  *   /dev/as/<name>         play as another user     /dev/as/guest  logged out
  *   /dev/advance?days=1    move the clock forward and run the daily scheduler
  *   /dev/seed?n=40&level=easy   add fake finished players to one of today's boards
+ *   /dev/endless?level=80  jump the current user to an endless level
+ *   /dev/endless-seed?n=12 add fake climbers to the endless leaderboards
  *   /dev/reddit            what the game asked Reddit to do
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -19,6 +21,7 @@ import react from '@vitejs/plugin-react';
 import { Hono } from 'hono';
 import { createServer as createVite } from 'vite';
 import { createApp } from '../../src/server/app';
+import { createEndless } from '../../src/server/endless';
 import { createGame } from '../../src/server/game';
 import type { Caller } from '../../src/server/ports';
 import { createFakeReddit, createFakeRedis } from '../../src/server/testing/fakes';
@@ -41,6 +44,7 @@ export const startDevServer = async (port = 5173): Promise<DevServer> => {
   const guest: Caller = { postId: null, userId: null, username: null, subreddit: 'gatecrash_dev' };
   const api = createApp(ports, () => who.getStore() ?? guest);
   const game = createGame(ports);
+  const endless = createEndless(ports);
   await game.ensureDailyPost();
 
   const dev = new Hono();
@@ -87,6 +91,30 @@ export const startDevServer = async (port = 5173): Promise<DevServer> => {
       clock.offset = started;
     }
     return c.json(await game.result(guest, init.day, level));
+  });
+  // Put the current user at an endless level, as if they had climbed there.
+  dev.get('/dev/endless', async (c) => {
+    const view = await endless.jump(who.getStore() ?? guest, Number(c.req.query('level') ?? '1'));
+    return c.json({ level: view.level, stage: view.stage, best: view.best });
+  });
+  // Fake climbers for the endless leaderboards, each solving their way up for real.
+  dev.get('/dev/endless-seed', async (c) => {
+    const n = Number(c.req.query('n') ?? '12');
+    const rng = createRng(n * 104729);
+    for (let p = 0; p < n; p++) {
+      const name = `climber_${rng.int(9000) + 1000}_${p}`;
+      const caller: Caller = { ...guest, userId: `t2_${name}`, username: name };
+      const start = 1 + rng.int(60);
+      await endless.jump(caller, start);
+      const climb = 1 + rng.int(8);
+      for (let i = 0; i < climb; i++) {
+        const view = await endless.view(caller);
+        const win = solve(view.board).solutions[0];
+        if (!win) break;
+        await endless.power(caller, view.level, win);
+      }
+    }
+    return c.json(await endless.leaderboard(guest, 'week'));
   });
   dev.get('/dev/reddit', (c) =>
     c.json({

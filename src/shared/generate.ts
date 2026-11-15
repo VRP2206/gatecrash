@@ -268,13 +268,23 @@ export type GenerateOptions = {
   salt?: string;
 };
 
+/** The first board a seed produces for a recipe, or null if the recipe never works out. */
+export const generateFrom = (
+  seed: string,
+  spec: DaySpec
+): Omit<SolvedBoard, 'day' | 'date' | 'level'> | null => {
+  const rng = createRng(hashSeed(seed));
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const board = tryBoard(rng, spec);
+    if (board) return board;
+  }
+  return null;
+};
+
 /** Deterministically build the board for a day: same options, same board. */
 export const generate = ({ day, dayIndex, level, salt = '' }: GenerateOptions): SolvedBoard => {
   const spec = specFor(difficultyFor(dayIndex, level));
-  const rng = createRng(hashSeed(`gatecrash:${salt}:${day}:${dayIndex}:${level}`));
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const board = tryBoard(rng, spec);
-    if (board) return { day, date: isoDate(dayIndex), level, ...board };
-  }
-  throw new Error(`no board found for day ${day} ${level}`);
+  const board = generateFrom(`gatecrash:${salt}:${day}:${dayIndex}:${level}`, spec);
+  if (!board) throw new Error(`no board found for day ${day} ${level}`);
+  return { day, date: isoDate(dayIndex), level, ...board };
 };

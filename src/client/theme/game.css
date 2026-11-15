@@ -1582,3 +1582,101 @@ body {
   color: var(--silk-dim);
   font-size: var(--text-xs);
 }
+
+/* ---------- endless mode ---------- */
+.level-endless {
+  border-left-color: var(--chip-notboth);
+}
+.level-endless .level-pips span.is-on {
+  background: var(--chip-notboth);
+  border-color: var(--chip-notboth);
+}
+.level-endless .level-go {
+  background: var(--chip-notboth);
+}
+.endless-reset {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+.climb {
+  padding: var(--s4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  background: var(--pcb-700);
+  border: var(--line) solid var(--pcb-line);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--r2);
+}
+.climb-level {
+  font-size: var(--text-hero);
+  line-height: 0.9;
+  color: var(--copper-hot);
+}
+.climb-blurb {
+  font-size: var(--text-sm);
+  color: var(--silk-dim);
+}
+.climb-pips {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+.climb-pips span {
+  height: 8px;
+  border: var(--line) solid var(--silk-faint);
+  border-radius: var(--r1);
+}
+.climb-pips span.is-done {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+.climb-pips span.is-now {
+  border-color: var(--amber);
+  box-shadow: 0 0 6px var(--amber-glow);
+}
+.climb-charges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+.climb-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s2);
+}
+.climb-stats div {
+  padding: var(--s2) var(--s3);
+  background: var(--pcb-900);
+  border: var(--line) solid var(--pcb-line);
+  border-radius: var(--r2);
+}
+.climb-stats dt {
+  font-size: var(--text-xs);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+.climb-stats dd {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+.climb-go {
+  width: 100%;
+}
+.climb-rules {
+  margin: 0;
+  padding-left: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  font-size: var(--text-sm);
+  color: var(--silk-dim);
+}

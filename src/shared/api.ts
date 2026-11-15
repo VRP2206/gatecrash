@@ -109,3 +109,39 @@ export type LeaderboardResponse =
   | { scope: 'streak'; rows: StreakLeader[]; total: number };
 
 export type ErrorResponse = { error: string; message: string };
+
+/** Where a player stands in endless mode, and the board in front of them. */
+export type EndlessView = {
+  week: number;
+  /** Level being played, from 1. */
+  level: number;
+  stage: number;
+  board: Board;
+  /** Failed placements on this level so far. */
+  attempts: FullPlacement[];
+  /** Charges burned in this stage. */
+  burned: number;
+  /** Highest level cleared this week. */
+  best: number;
+  /** Levels gained today. */
+  today: number;
+  /** Highest level ever cleared. */
+  record: number;
+  fuses: number;
+  /** Milliseconds until the weekly reset. */
+  endsInMs: number;
+};
+export type EndlessPowerRequest = { level: number; placement: FullPlacement };
+export type EndlessPowerResponse = {
+  rows: RowResult[];
+  outcome: 'cleared' | 'failed' | 'fused';
+  /** The run after this press: the next board on a clear, the stage's first on a blown fuse. */
+  view: EndlessView;
+};
+export type EndlessLeader = { name: string; levels: number; you: boolean };
+export type EndlessLeaderboardResponse = {
+  scope: 'day' | 'week';
+  rows: EndlessLeader[];
+  rank: number | null;
+  total: number;
+};
