@@ -1,0 +1,55 @@
+{
+  "private": true,
+  "name": "gatecrash",
+  "version": "0.1.0",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "devvit playtest",
+    "dev:local": "tsx tools/dev/server.ts",
+    "upload": "npm run check && devvit upload",
+    "login": "devvit login",
+    "lint": "eslint 'src/**/*.{ts,tsx}' 'tools/**/*.ts'",
+    "format": "prettier --write .",
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "board": "tsx tools/board.ts",
+    "stats": "tsx tools/stats.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@devvit/analytics": "0.15.3",
+    "@devvit/start": "0.15.3",
+    "@devvit/web": "0.15.3",
+    "@hono/node-server": "2.1.6",
+    "devvit": "0.15.3",
+    "hono": "4.13.17",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@devvit/test": "0.15.3",
+    "@eslint/js": "10.0.1",
+    "@fontsource/big-shoulders-stencil": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@types/node": "^24.13.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.14.0",
+    "playwright": "1.65.1",
+    "prettier": "3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "8.3.7",
+    "vitest": "5.1.0"
+  }
+}
