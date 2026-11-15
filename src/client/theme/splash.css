@@ -1,0 +1,126 @@
+/* Inline post. Tap-only: nothing here may capture scroll or swipe. */
+.splash-body {
+  background: var(--pcb-800);
+  overflow: hidden;
+}
+
+.splash {
+  position: relative;
+  height: 100%;
+  min-height: 280px;
+  padding: var(--s5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s4);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.splash-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+.art-traces path,
+.art-hot path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.art-traces path {
+  stroke: var(--copper-dim);
+  stroke-width: 4;
+  opacity: 0.55;
+}
+.art-hot path {
+  stroke: var(--copper-hot);
+  stroke-width: 4;
+  stroke-dasharray: 46 520;
+  animation: art-run 7s linear infinite;
+  filter: drop-shadow(0 0 5px var(--amber-glow));
+}
+.art-hot path:nth-child(2) {
+  animation-delay: -3.5s;
+}
+.art-pads circle {
+  fill: var(--pcb-800);
+  stroke: var(--copper);
+  stroke-width: 3;
+}
+.art-holes circle {
+  fill: var(--pcb-950);
+  stroke: var(--pcb-line);
+  stroke-width: 2;
+}
+@keyframes art-run {
+  from {
+    stroke-dashoffset: 566;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.splash-copy {
+  max-width: 30rem;
+}
+.splash-title {
+  margin: var(--s2) 0 var(--s3);
+  font-size: var(--text-hero);
+  color: var(--silk);
+  text-shadow: 0 2px 0 var(--pcb-950);
+}
+.splash-pitch {
+  max-width: 19rem;
+  font-size: var(--text-lg);
+  color: var(--silk);
+  text-wrap: balance;
+}
+
+.splash-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+}
+.splash-streak {
+  padding: var(--s1) var(--s2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--pcb-950);
+  background: var(--silk);
+  border-radius: var(--r1);
+}
+.splash-play {
+  min-width: 11rem;
+  min-height: 56px;
+  font-size: var(--text-2xl);
+}
+.splash-note {
+  color: var(--silk);
+  background: var(--pcb-800);
+  padding: 0 var(--s1);
+  margin-left: calc(var(--s1) * -1);
+}
+
+@media (max-height: 340px) {
+  .splash {
+    padding: var(--s4);
+  }
+  .splash-pitch {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-hot path {
+    animation: none;
+    stroke-dasharray: none;
+    opacity: 0.35;
+  }
+}

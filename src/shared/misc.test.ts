@@ -154,3 +154,15 @@ describe('streak', () => {
     expect(flairText(75)).toBe('Wizard · 75');
   });
 });
+
+describe('tutorial board', () => {
+  it('has exactly one answer and the swap fails the live row', async () => {
+    const { TUTORIAL_BOARD } = await import('./tutorial');
+    const { simulate } = await import('./sim');
+    const result = solve(TUTORIAL_BOARD);
+    expect(result.candidates).toBe(2);
+    expect(result.solutions).toEqual([['AND', 'OR']]);
+    const swapped = simulate(TUTORIAL_BOARD, ['OR', 'AND']);
+    expect(swapped[TUTORIAL_BOARD.probeRow]?.ok).toBe(false);
+  });
+});

@@ -16,7 +16,8 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test",
     "board": "tsx tools/board.ts",
-    "stats": "tsx tools/stats.ts"
+    "stats": "tsx tools/stats.ts",
+    "shots": "tsx tools/shots.ts"
   },
   "engines": {
     "node": ">=24.0.0"

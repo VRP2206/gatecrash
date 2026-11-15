@@ -1,0 +1,158 @@
+@import './tokens.css';
+
+@font-face {
+  font-family: 'Big Shoulders Stencil';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../assets/fonts/big-shoulders-stencil-latin-800-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--pcb-800);
+  color: var(--silk);
+  font-family: var(--font-text);
+  font-size: var(--text-md);
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:disabled {
+  cursor: default;
+}
+:focus-visible {
+  outline: var(--line-bold) solid var(--silk);
+  outline-offset: 2px;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+/* small silkscreen-style caption */
+.silk {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The main action: a chunky bench switch, not a pill. */
+.btn {
+  min-height: var(--tap);
+  padding: 0 var(--s5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-xl);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--pcb-950);
+  background: var(--amber);
+  border-radius: var(--r2);
+  box-shadow:
+    inset 0 -4px 0 var(--amber-deep),
+    0 0 0 var(--line) var(--pcb-950);
+  transition:
+    transform var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    filter var(--fast) var(--ease);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 -2px 0 var(--amber-deep),
+    0 0 0 var(--line) var(--pcb-950);
+}
+.btn:disabled {
+  color: var(--silk-faint);
+  background: var(--pcb-600);
+  box-shadow:
+    inset 0 -4px 0 var(--pcb-700),
+    0 0 0 var(--line) var(--pcb-950);
+}
+
+/* Secondary actions read as silkscreen labels with a pad. */
+.link {
+  min-height: var(--tap);
+  padding: 0 var(--s3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--silk);
+  border: var(--line) solid var(--pcb-line);
+  border-radius: var(--r2);
+  background: var(--pcb-700);
+  transition: border-color var(--fast) var(--ease);
+}
+.link:hover:not(:disabled) {
+  border-color: var(--copper);
+}
+.link:disabled {
+  color: var(--silk-faint);
+}

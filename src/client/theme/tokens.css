@@ -1,0 +1,105 @@
+/*
+ * Gatecrash design tokens: a hobbyist's workbench at night.
+ * Every colour, size, radius and duration used anywhere in the client is defined here.
+ */
+:root {
+  /* board */
+  --pcb-950: #060e0a;
+  --pcb-900: #0a1711;
+  --pcb-800: #0c1a14;
+  --pcb-700: #11261c;
+  --pcb-600: #183427;
+  --pcb-500: #214636;
+  --pcb-line: #2c5a46;
+
+  /* copper traces */
+  --copper-dead: #4a3a2c;
+  --copper-dim: #8a5a35;
+  --copper: #c9853f;
+  --copper-hot: #ffc266;
+
+  /* light */
+  --amber: #ffb224;
+  --amber-deep: #c77a00;
+  --amber-glow: rgb(255 178 36 / 0.5);
+  --amber-haze: rgb(255 178 36 / 0.14);
+
+  /* silkscreen */
+  --silk: #f1e8d0;
+  --silk-dim: #b3ad96;
+  --silk-faint: #7d8576;
+
+  /* parts */
+  --ic: #16181b;
+  --ic-top: #23262b;
+  --ic-edge: #343a41;
+  --tin: #c3c7cc;
+  --tin-dim: #7c838a;
+
+  /* signals */
+  --ok: #86e09a;
+  --bad: #ff7a6b;
+  --bad-deep: #8f2f25;
+
+  /* paper (test report) */
+  --paper: #f3ecd8;
+  --paper-shade: #e2d8bd;
+  --ink: #1b2620;
+  --ink-soft: #55604f;
+  --ink-rule: #b9ae8f;
+  --stamp-pass: #1d6b3a;
+  --stamp-fail: #a3271b;
+
+  --shade: rgb(3 8 6 / 0.72);
+  --shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+
+  /* type */
+  --font-display: 'Big Shoulders Stencil', 'Arial Narrow', Impact, sans-serif;
+  --font-text: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2.25rem;
+  --text-hero: clamp(2.75rem, 15vw, 5rem);
+  --track: 0.08em;
+  --track-wide: 0.16em;
+
+  /* space */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --tap: 44px;
+
+  /* shape: boards are angular, so radii stay small */
+  --r1: 2px;
+  --r2: 4px;
+  --r3: 8px;
+  --line: 1px;
+  --line-bold: 2px;
+
+  /* motion */
+  --fast: 120ms;
+  --base: 220ms;
+  --slow: 480ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* time for a signal to cross one column of the board */
+  --hop: 110ms;
+
+  /* board drawing (SVG user units) */
+  --trace: 3;
+  --trace-hot: 3.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 1ms;
+    --base: 1ms;
+    --slow: 1ms;
+    --hop: 1ms;
+  }
+}
