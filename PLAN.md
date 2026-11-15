@@ -80,7 +80,12 @@ chip), not by the words "XOR gate". A player who has never seen a logic gate mus
 Is "mentally simulate, then spend a charge" fun, or frustrating? Tuning knobs, in order of preference:
 (a) let the player flip input switches and see wire states for the **first row only** for free;
 (b) raise charges to 6; (c) show which *bulb* was wrong, not just which row.
-Pick by playtesting with 3 people who don't study CS. Record the decision here: `____`.
+Pick by playtesting with 3 people who don't study CS. Record the decision here:
+**Provisional (15 Nov, not yet playtested with people): (a) + (c).** One fixed "live" row of the
+test card is wired to the bench for free: the board shows its signals and bulb verdicts as chips
+move. Power then shows a tick or cross per *bulb* on every row, and any tested row can be tapped to
+see it on the board. Charges stay at 5. Confirm or change after the Phase 2 playtest; the live row
+is `probeRow` in `src/shared/generate.ts`.
 
 ---
 
@@ -173,6 +178,17 @@ Server rules: reject `/api/power` if status is final; validate the placement aga
 
 ## 4. Phases
 
+> **Status, 15 Nov 2026.** Code for Phases 1–4 and most of Phase 5 is written and passes
+> `npm run check`; it has been exercised only in the local harness (`npm run dev:local`,
+> `npm run shots`), **never on Reddit**. Ticked boxes mean "built and tested locally". Still open:
+> everything marked Human, the first real `devvit playtest` (scaffold-runs-in-subreddit, phone
+> check, two-account check, turning the cron on), the human playtest, difficulty calibration from
+> real data, the fresh-eyes judge review, and Phase 6. Deviations from this plan: Mon–Tue boards
+> use 3–4 sockets and 1–2 bulbs (the fixed 3/1 spec gave near-identical boards on consecutive
+> days); Mon–Thu allow up to 2 winning arrangements (mirror-image pairs are common); Tailwind was
+> dropped in favour of plain CSS on `tokens.css`; wires may skip at most one column. Stretch goals
+> (Workshop, realtime counter, sound) are not built.
+
 Dates assume evenings + weekends. Each phase ends with something uploaded and playable.
 **Rule for every phase:** `npm run check` (typecheck + lint + tests) passes before moving on,
 and the game is opened on a real phone in the Reddit app at least once.
@@ -182,67 +198,67 @@ and the game is opened on a real phone in the Reddit app at least once.
 - [ ] Human: **ask in the Devvit Discord / r/Devvit to be allowlisted for Journeys** and how journey-map
       approval works for hackathon apps. Do this on day 1 — it has a human in the loop.
 - [ ] Scaffold from the React template; `npm run dev` playtest shows the template post in the subreddit.
-- [ ] Claude: read the docs index, Devvit Rules, and the "how to build games for Reddit" guide; write
+- [x] Claude: read the docs index, Devvit Rules, and the "how to build games for Reddit" guide; write
       `docs/platform-notes.md` with the exact current APIs for: custom post creation, splash/entry
       points, redis, scheduler cron, comments on behalf of a user, user flair, Journeys, realtime.
       Flag anything that needs special permission or approval.
-- [ ] Add Vitest, ESLint, Prettier, `npm run check`. Write `CLAUDE.md` (see §7).
+- [x] Add Vitest, ESLint, Prettier, `npm run check`. Write `CLAUDE.md` (see §7).
 - **Done when:** template runs in the subreddit and `platform-notes.md` has no "unknown" left on post creation, redis, scheduler.
 
 ### Phase 1 — Engine (Mon 16 – Thu 19 Nov)
-- [ ] `shared/types.ts`, `rng.ts`, `sim.ts`, `solve.ts`, `generate.ts`, `day.ts`, `score.ts`.
-- [ ] Tests: simulator truth tables for every chip; generator determinism (same day → same board);
+- [x] `shared/types.ts`, `rng.ts`, `sim.ts`, `solve.ts`, `generate.ts`, `day.ts`, `score.ts`.
+- [x] Tests: simulator truth tables for every chip; generator determinism (same day → same board);
       property test over 2,000 days: every board passes all reject rules and the reference solution wins.
-- [ ] CLI script `npm run board -- --day 12` prints an ASCII board + target + solution count, for eyeballing.
-- [ ] Script that prints difficulty stats over 60 days (sockets, solution count, tray size).
+- [x] CLI script `npm run board -- --day 12` prints an ASCII board + target + solution count, for eyeballing.
+- [x] Script that prints difficulty stats over 60 days (sockets, solution count, tray size).
 - **Done when:** 2,000-day property test is green and 10 printed boards look sane to a human.
 
 ### Phase 2 — Playable board (Fri 20 – Tue 24 Nov)
-- [ ] `BoardSvg` renders any board from Phase 1 responsively (portrait phone first, then desktop inline post).
-- [ ] Tap-chip-then-tap-socket placement; tap a filled socket to return the chip. No drag-and-drop required
+- [x] `BoardSvg` renders any board from Phase 1 responsively (portrait phone first, then desktop inline post).
+- [x] Tap-chip-then-tap-socket placement; tap a filled socket to return the chip. No drag-and-drop required
       (add it later only if tap feels poor). Minimum touch target 44 px.
-- [ ] Power: row-by-row signal animation (skippable by tapping), ticks/crosses on the target card, charge meter.
-- [ ] Win and fuse states (local only for now, fake `/api` with in-memory state).
+- [x] Power: row-by-row signal animation (skippable by tapping), ticks/crosses on the target card, charge meter.
+- [x] Win and fuse states (local only for now, fake `/api` with in-memory state).
 - [ ] **Playtest with 3 non-CS people. Resolve the open design question in §2 and write the answer down.**
 - **Done when:** a first-time player solves a Monday board without being told anything.
 
 ### Phase 3 — Daily backbone (Wed 25 – Sat 28 Nov)
-- [ ] `store.ts`, real `/api/init`, `/api/start`, `/api/power`, `/api/result`.
-- [ ] Scheduler task creates the daily post at 00:00 UTC; moderator menu item to create one on demand.
-- [ ] Streak logic (UTC days; solving day N after solving N-1 extends; archive plays never count). Unit-test it.
-- [ ] Stats histogram + daily leaderboard written on completion.
-- [ ] Splash/entry screen: name, one-line description, day number + date, streak, Play. Nothing else.
-- [ ] Refreshing or reopening the post restores the exact in-progress state.
+- [x] `store.ts`, real `/api/init`, `/api/start`, `/api/power`, `/api/result`.
+- [x] Scheduler task creates the daily post at 00:00 UTC; moderator menu item to create one on demand.
+- [x] Streak logic (UTC days; solving day N after solving N-1 extends; archive plays never count). Unit-test it.
+- [x] Stats histogram + daily leaderboard written on completion.
+- [x] Splash/entry screen: name, one-line description, day number + date, streak, Play. Nothing else.
+- [x] Refreshing or reopening the post restores the exact in-progress state.
 - [ ] **Turn the daily cron on and leave it on.** By judging there should be 10+ real days of posts.
 - **Done when:** two accounts can play the same day independently and see each other in the histogram.
 
 ### Phase 4 — Reddit layer (Sun 29 Nov – Wed 2 Dec)
-- [ ] Result card: one screen, one primary action. Share-to-comments, Join, Archive as secondary.
-- [ ] Share comment (explicit tap only; show the exact text before posting).
-- [ ] Streak flair tiers; set on completion.
-- [ ] Archive screen.
-- [ ] Leaderboard screen (today / streak).
-- [ ] First-time onboarding: a 2-socket practice board with three contextual hints (pointing at tray,
+- [x] Result card: one screen, one primary action. Share-to-comments, Join, Archive as secondary.
+- [x] Share comment (explicit tap only; show the exact text before posting).
+- [x] Streak flair tiers; set on completion.
+- [x] Archive screen.
+- [x] Leaderboard screen (today / streak).
+- [x] First-time onboarding: a 2-socket practice board with three contextual hints (pointing at tray,
       socket, Power). No wall of text. Stored per user; replayable from a "?" button.
-- [ ] Journeys instrumentation behind a `useJourney` hook: start on first chip placed, progress on each
+- [x] Journeys instrumentation behind a `useJourney` hook: start on first chip placed, progress on each
       Power, end with complete=true/false. Must fail silently if the app isn't allowlisted yet.
 - **Done when:** a new account goes splash → tutorial → solve → result → comment → flair without a dead end.
 
 ### Phase 5 — Polish (Thu 3 – Sun 6 Dec)
-- [ ] Visual identity pass (§5). Every screen fits the viewport with no scroll during play, on a small
+- [x] Visual identity pass (§5). Every screen fits the viewport with no scroll during play, on a small
       phone and in the desktop inline post.
-- [ ] Accessibility: contrast ≥ 4.5:1 for text; never colour-only (lit bulbs also change shape/glow, ticks
+- [x] Accessibility: contrast ≥ 4.5:1 for text; never colour-only (lit bulbs also change shape/glow, ticks
       vs crosses are different glyphs); `prefers-reduced-motion` shortens the signal animation; labelled controls.
-- [ ] Loading, empty, and error states for every endpoint (first player of the day sees a sensible histogram).
+- [x] Loading, empty, and error states for every endpoint (first player of the day sees a sensible histogram).
 - [ ] Performance: initial bundle small, no layout shift on load, fonts self-hosted and subset.
 - [ ] Difficulty calibration from real play data: adjust the weekday table if Mon solve rate < 85% or Sun > 70%.
 - [ ] Fresh-eyes review: run a separate Claude Code session with only the prompt "You are a hackathon judge;
       here is the judging rubric; open the app and list everything that looks unfinished or generic."
-- [ ] Devvit Rules compliance read-through against `platform-notes.md`.
+- [x] Devvit Rules compliance read-through against `platform-notes.md`.
 - **Done when:** the judge-review session's "must fix" list is empty.
 
 ### Phase 6 — Submit (Mon 7 – Tue 8 Dec)
-- [ ] `README.md` at root: what it is, how to play (with screenshots), how daily generation works, how the
+- [x] `README.md` at root: what it is, how to play (with screenshots), how daily generation works, how the
       Reddit features are used, tech notes, how to run locally.
 - [ ] `devvit upload` the final build. **Do not publish.**
 - [ ] Confirm subreddit is public and under 200 members; pin a "Start here" post linking today's board.

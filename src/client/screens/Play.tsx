@@ -208,7 +208,7 @@ export const Play = ({
       </div>
 
       <footer className={`zone zone-power ${hint?.zone === 'power' ? 'is-hinted' : ''}`}>
-        <div className="power-meter">
+        <div className={`power-meter ${done && game.reveal ? 'is-spent' : ''}`}>
           <Charges used={game.used} spending={game.pending} />
           {!done && (
             <span className="silk">

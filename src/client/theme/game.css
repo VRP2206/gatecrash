@@ -733,6 +733,14 @@ body {
   flex-direction: column;
   gap: var(--s1);
 }
+/* fuse blown: every cell is empty, so the room goes to the two buttons */
+.power-meter.is-spent {
+  display: none;
+}
+.power-meter.is-spent + .power-actions {
+  flex: 1;
+  justify-content: space-between;
+}
 .power-actions {
   display: flex;
   align-items: center;
