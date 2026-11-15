@@ -62,6 +62,7 @@ export const api = {
   result: (day: number) => call<ResultResponse>(withDay('/api/result', day)),
   share: (day: number) => call<ShareResponse>('/api/share', { day }),
   join: () => call<JoinResponse>('/api/join', {}),
+  forget: () => call<{ ok: true }>('/api/forget', {}),
   tutorialDone: () => call<{ ok: true }>('/api/tutorial-done', {}),
   archive: () => call<ArchiveResponse>('/api/archive'),
   leaderboard: (scope: 'day' | 'streak', day: number | null) =>

@@ -139,8 +139,16 @@ export const layoutBoard = (board: Board): BoardLayout => {
     return used;
   };
 
-  /** A free horizontal track through a socket column, as close to `want` as possible. */
-  const trackThrough = (column: number, want: number, nudge: number): number => {
+  /**
+   * A free horizontal track through a socket column, as close to `want` as
+   * possible. Each source gets its own track per column (wires of one net
+   * share it), so two skipping nets never run on top of each other.
+   */
+  const taken = new Map<string, number>();
+  const trackThrough = (column: number, want: number, source: Source): number => {
+    const key = `${column}:${sourceKey(source)}`;
+    const known = taken.get(key);
+    if (known !== undefined) return known;
     const ys = (perLayer[column - 1] ?? [])
       .map((i) => sockets[i]?.y ?? 0)
       .sort((a, b) => a - b);
@@ -148,9 +156,14 @@ export const layoutBoard = (board: Board): BoardLayout => {
     const last = ys[ys.length - 1] ?? height / 2;
     const tracks = [first - rowGap / 2, last + rowGap / 2];
     for (let i = 1; i < ys.length; i++) tracks.push(((ys[i - 1] ?? 0) + (ys[i] ?? 0)) / 2);
-    let best = tracks[0] ?? want;
-    for (const t of tracks) if (Math.abs(t - want) < Math.abs(best - want)) best = t;
-    return Math.min(height - 8, Math.max(8, best + nudge));
+    const used = new Set<number>();
+    for (const [k, y] of taken) if (k.startsWith(`${column}:`)) used.add(y);
+    const free = tracks.filter((t) => !used.has(t));
+    const pool = free.length > 0 ? free : tracks;
+    let best = pool[0] ?? want;
+    for (const t of pool) if (Math.abs(t - want) < Math.abs(best - want)) best = t;
+    taken.set(key, best);
+    return best;
   };
 
   /** One jog inside the gap before `toColumn`: flat, 45-degree diagonal, flat. */
@@ -166,7 +179,6 @@ export const layoutBoard = (board: Board): BoardLayout => {
 
   const wires: WireLayout[] = [];
   const fanout = new Map<string, { at: Point; count: number }>();
-  let skips = 0;
 
   const addWire = (from: Source, end: Point, toColumn: number, toSocket: number, toBulb: number) => {
     const start = outPoint(from);
@@ -176,9 +188,7 @@ export const layoutBoard = (board: Board): BoardLayout => {
     if (toColumn - fromColumn > 1) {
       // Skips a socket column: cross it on a free track between the sockets.
       const mid = fromColumn + 1;
-      const nudge = (skips % 2 === 0 ? 1 : -1) * Math.ceil(skips / 2) * 5;
-      skips++;
-      const trackY = trackThrough(mid, (start.y + end.y) / 2, nudge);
+      const trackY = trackThrough(mid, (start.y + end.y) / 2, from);
       const across = { x: columnRight(mid), y: trackY };
       points.push(...jog(cursor, { x: columnLeft(mid), y: trackY }, mid, from), across);
       cursor = across;

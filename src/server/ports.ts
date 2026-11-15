@@ -7,6 +7,7 @@
 export type RedisLike = {
   get(key: string): Promise<string | undefined>;
   set(key: string, value: string, options?: { nx?: boolean }): Promise<string>;
+  del(...keys: string[]): Promise<void>;
   incrBy(key: string, value: number): Promise<number>;
   hGet(key: string, field: string): Promise<string | undefined>;
   hGetAll(key: string): Promise<Record<string, string>>;
@@ -14,6 +15,7 @@ export type RedisLike = {
   hSet(key: string, fieldValues: Record<string, string>): Promise<number>;
   hSetNX(key: string, field: string, value: string): Promise<number>;
   hIncrBy(key: string, field: string, value: number): Promise<number>;
+  hDel(key: string, fields: string[]): Promise<number>;
   zAdd(key: string, ...members: { member: string; score: number }[]): Promise<number>;
   zRange(
     key: string,

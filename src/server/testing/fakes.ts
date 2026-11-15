@@ -36,6 +36,13 @@ export const createFakeRedis = (): RedisLike => {
       strings.set(key, value);
       return 'OK';
     },
+    async del(...keys) {
+      for (const key of keys) {
+        strings.delete(key);
+        hashes.delete(key);
+        zsets.delete(key);
+      }
+    },
     async incrBy(key, value) {
       const next = Number(strings.get(key) ?? '0') + value;
       strings.set(key, String(next));
@@ -67,6 +74,11 @@ export const createFakeRedis = (): RedisLike => {
       const next = Number(hash(key).get(field) ?? '0') + value;
       hash(key).set(field, String(next));
       return next;
+    },
+    async hDel(key, fields) {
+      let removed = 0;
+      for (const field of fields) if (hash(key).delete(field)) removed++;
+      return removed;
     },
     async zAdd(key, ...members) {
       let added = 0;

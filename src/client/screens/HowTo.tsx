@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { api, messageOf } from '../api';
 import { CHIP_INFO, CHIP_TYPES, MAX_CHARGES, type ChipType } from '../../shared/types';
 import { ChipGlyph, ChipTable } from '../board/ChipArt';
 import { Chevron } from '../board/icons';
@@ -6,12 +8,30 @@ import { useBeat } from '../hooks/useBeat';
 type Props = {
   /** Chips to explain; today's tray first. */
   chips: ChipType[];
+  loggedIn: boolean;
+  /** Called after the player's data has been erased. */
+  onForgotten: () => void;
   onBack: () => void;
   onPractice: () => void;
 };
 
-export const HowTo = ({ chips, onBack, onPractice }: Props) => {
+export const HowTo = ({ chips, loggedIn, onBack, onPractice, onForgotten }: Props) => {
   const beat = useBeat();
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const forget = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      await api.forget();
+      onForgotten();
+    } catch (e) {
+      setProblem(messageOf(e));
+      setBusy(false);
+    }
+  };
   const order = [...new Set([...chips, ...CHIP_TYPES])];
   return (
     <main className="page">
@@ -48,6 +68,31 @@ export const HowTo = ({ chips, onBack, onPractice }: Props) => {
       <button type="button" className="link" onClick={onPractice}>
         Replay the practice board
       </button>
+
+      {loggedIn && (
+        <section className="privacy">
+          <h2 className="silk page-sub">Your data</h2>
+          <p className="page-lede">
+            Gatecrash stores your username, your results and your streak, and nothing else. You can
+            erase all of it; this also clears your streak flair.
+          </p>
+          {asking ? (
+            <div className="privacy-actions">
+              <button type="button" className="link is-danger" disabled={busy} onClick={() => void forget()}>
+                {busy ? 'Erasing…' : 'Yes, erase everything'}
+              </button>
+              <button type="button" className="link" disabled={busy} onClick={() => setAsking(false)}>
+                Keep it
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="link" onClick={() => setAsking(true)}>
+              Erase my data
+            </button>
+          )}
+          {problem && <p className="page-lede is-error">{problem}</p>}
+        </section>
+      )}
     </main>
   );
 };

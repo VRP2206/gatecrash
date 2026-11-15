@@ -148,6 +148,7 @@ export const App = () => {
           title={title}
           state={state}
           loggedIn={init.loggedIn}
+          username={init.username}
           isToday={isToday}
           subreddit={init.subreddit}
           nextAt={data.nextAt}
@@ -173,6 +174,15 @@ export const App = () => {
       return (
         <HowTo
           chips={[...new Set(init.board.tray)]}
+          loggedIn={init.loggedIn}
+          onForgotten={() => {
+            try {
+              window.localStorage.removeItem(TUTORIAL_KEY);
+            } catch {
+              // nothing stored, nothing to clear
+            }
+            window.location.reload();
+          }}
           onBack={() => show(current.back)}
           onPractice={() => {
             setPracticeRun((n) => n + 1);

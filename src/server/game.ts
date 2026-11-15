@@ -311,6 +311,20 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       return { joined: true };
     },
 
+    /** Delete everything stored about the caller, and clear the flair the game set. */
+    async forget(caller: Caller): Promise<{ ok: true }> {
+      const uid = requireUser(caller);
+      await store.forgetUser(uid);
+      if (caller.username) {
+        try {
+          await reddit.setUserFlair(caller.username, '');
+        } catch (error) {
+          console.warn('flair reset failed', error);
+        }
+      }
+      return { ok: true };
+    },
+
     async tutorialDone(caller: Caller): Promise<{ ok: true }> {
       if (caller.userId) await store.setFlag(caller.userId, 'tutorial');
       return { ok: true };

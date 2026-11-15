@@ -24,7 +24,8 @@ export default defineConfig([
     files: ['tools/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2023,
-      globals: globals.node,
+      // dev stubs and screenshot callbacks run in the browser
+      globals: { ...globals.node, ...globals.browser },
       parserOptions: {
         project: ['./tools/tsconfig.vite.json'],
         tsconfigRootDir: import.meta.dirname,

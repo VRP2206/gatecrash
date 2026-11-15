@@ -268,6 +268,21 @@ export const createStore = (redis: RedisLike) => {
     async setFlag(uid: string, flag: 'tutorial' | 'joined'): Promise<void> {
       await redis.hSet(`u:${uid}:flags`, { [flag]: '1' });
     },
+    /**
+     * Erase everything stored about one player: progress, streak, leaderboard
+     * places, name. Anonymous totals in stats:{day} stay, since they identify nobody.
+     */
+    async forgetUser(uid: string): Promise<void> {
+      const days = Object.keys(await redis.hGetAll(`u:${uid}:days`));
+      for (const day of days) {
+        await redis.del(dayKey(uid, num(day)));
+        await redis.zRem(`lb:${day}`, [uid]);
+      }
+      await redis.del(`u:${uid}:days`, `u:${uid}:streak`, `u:${uid}:flags`);
+      await redis.zRem('lb:streak', [uid]);
+      await redis.hDel('streak:last', [uid]);
+      await redis.hDel('names', [uid]);
+    },
   };
 };
 

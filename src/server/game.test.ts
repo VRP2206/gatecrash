@@ -281,6 +281,30 @@ describe('sharing and joining', () => {
   });
 });
 
+describe('forgetting a player', () => {
+  it('erases progress, streak, leaderboard places and flair, but not the day totals', async () => {
+    const w = world();
+    const ada = caller('ada');
+    const bob = caller('bob');
+    const { board } = await w.game.init(ada, null);
+    await w.game.power(ada, 1, answers(board).win);
+    await w.game.power(bob, 1, answers(board).win);
+    expect((await w.game.leaderboard(bob, 'day', 1)).rows).toHaveLength(2);
+
+    await w.game.forget(ada);
+    const after = await w.game.init(ada, null);
+    expect(after.state.status).toBe('new');
+    expect(after.streak).toEqual({ current: 0, best: 0, tier: null });
+    expect(w.reddit.flairs.get('ada')).toBe('');
+    const day = await w.game.leaderboard(bob, 'day', 1);
+    expect(day.rows.map((r) => r.name)).toEqual(['bob']);
+    const streaks = await w.game.leaderboard(bob, 'streak', null);
+    expect(streaks.rows.map((r) => r.name)).toEqual(['bob']);
+    expect((await w.game.archive(ada)).days[0]?.status).toBe('new');
+    expect((await w.game.result(bob, 1)).histogram).toEqual([2, 0, 0, 0, 0, 0]);
+  });
+});
+
 describe('guests', () => {
   it('can load the board but not write', async () => {
     const w = world();

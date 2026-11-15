@@ -93,7 +93,7 @@ export const ChipGlyph = ({ chip, beat, bare = false, className = '' }: GlyphPro
         y={20}
         w={46}
         h={34}
-        fontSize={bare ? 0 : lines(chip).length > 1 ? 9 : 9.5}
+        fontSize={bare ? 0 : lines(chip).length > 1 ? 9 : CHIP_INFO[chip].label.length > 6 ? 8.2 : 9.5}
       />
     </svg>
   );

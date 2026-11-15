@@ -70,6 +70,7 @@ export const createApp = (ports: Ports, getCaller: () => Caller): Hono => {
     return c.json(await game.share(getCaller(), requireDay(body.day)));
   });
   app.post('/api/join', async (c) => c.json(await game.join(getCaller())));
+  app.post('/api/forget', async (c) => c.json(await game.forget(getCaller())));
   app.post('/api/tutorial-done', async (c) => c.json(await game.tutorialDone(getCaller())));
   app.get('/api/archive', async (c) => c.json(await game.archive(getCaller())));
   app.get('/api/leaderboard', async (c) =>

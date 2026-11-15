@@ -13,6 +13,7 @@ type Props = {
   /** Final state as the client knows it (the only copy for logged-out players). */
   state: DayState;
   loggedIn: boolean;
+  username: string | null;
   isToday: boolean;
   subreddit: string | null;
   /** Client clock time of the next board. */
@@ -46,6 +47,7 @@ export const Result = ({
   title,
   state,
   loggedIn,
+  username,
   isToday,
   subreddit,
   nextAt,
@@ -188,11 +190,14 @@ export const Result = ({
 
         {confirming ? (
           <section className="confirm" aria-label="Confirm comment">
-            <p className="slip-note">This will be posted as a comment from your account:</p>
+            <p className="slip-note">
+              This posts a public comment from your account{username ? ` (u/${username})` : ''}, as a
+              reply in this board&rsquo;s results thread:
+            </p>
             <blockquote className="confirm-line">{line}</blockquote>
             <div className="confirm-actions">
               <button type="button" className="slip-btn" disabled={busy} onClick={() => void share()}>
-                {busy ? 'Posting…' : 'Post comment'}
+                {busy ? 'Posting…' : 'Post as me'}
               </button>
               <button type="button" className="slip-link" disabled={busy} onClick={() => setConfirming(false)}>
                 Cancel
