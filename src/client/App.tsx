@@ -1,19 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { InitResponse } from '../shared/api';
+import type { InitResponse, LevelSummary } from '../shared/api';
 import { shortDate } from '../shared/day';
 import { TUTORIAL_BOARD } from '../shared/tutorial';
-import { NEW_DAY_STATE, type DayState } from '../shared/types';
+import {
+  LEVELS,
+  LEVEL_LABEL,
+  NEW_DAY_STATE,
+  type DayState,
+  type Level,
+} from '../shared/types';
 import { api } from './api';
 import { useJourney } from './hooks/useJourney';
 import { useLoad } from './hooks/useLoad';
 import { Archive } from './screens/Archive';
 import { HowTo } from './screens/HowTo';
 import { Leaders } from './screens/Leaders';
+import { Levels } from './screens/Levels';
 import { Play } from './screens/Play';
 import { Result } from './screens/Result';
 import { guestKey, localSession, readGuestState, remoteSession } from './session';
 
-type View = 'play' | 'practice' | 'result' | 'archive' | 'leaders' | 'howto';
+type View = 'levels' | 'play' | 'practice' | 'result' | 'archive' | 'leaders' | 'howto';
 
 const TUTORIAL_KEY = 'gatecrash:practice-done';
 
@@ -32,28 +39,44 @@ type Loaded = {
   init: InitResponse;
   /** The player's state when the board loaded (from the server, or this browser for guests). */
   state: DayState;
+  /** Standing on all three boards (from the server, or this browser for guests). */
+  levels: LevelSummary[];
   /** Client clock when the answer arrived, and when the next board is due. */
   openedAt: number;
   nextAt: number;
 };
 
-const loadDay = async (day: number | null): Promise<Loaded> => {
-  const init = await api.init(day);
+const loadBoard = async (day: number | null, level: Level | null): Promise<Loaded> => {
+  const init = await api.init(day, level);
   const openedAt = Date.now();
+  const guest = (l: Level) => readGuestState(init.day, l);
   return {
     init,
-    state: init.loggedIn ? init.state : readGuestState(init.day),
+    state: init.loggedIn ? init.state : guest(init.level),
+    levels: init.loggedIn
+      ? init.levels
+      : init.levels.map((l) => ({
+          ...l,
+          status: guest(l.level).status,
+          charges: guest(l.level).attempts.length,
+        })),
     openedAt,
     nextAt: openedAt + init.nextInMs,
   };
 };
 
+/** Which board is open. `visit` forces a fresh load every time a board is entered. */
+type Pick = { day: number | null; level: Level | null; visit: number };
+
 export const App = () => {
-  const [day, setDay] = useState<number | null>(null);
-  const { data, error: problem, retry } = useLoad(`day:${day ?? 'post'}`, () => loadDay(day));
-  // What the player has done since the board loaded, keyed so a new day starts clean.
-  const [progress, setProgress] = useState<{ day: number; state: DayState } | null>(null);
-  const [nav, setNav] = useState<{ day: number; view: View; back: View } | null>(null);
+  const [pick, setPick] = useState<Pick>({ day: null, level: null, visit: 0 });
+  const { data, error: problem, retry } = useLoad(
+    `board:${pick.day ?? 'post'}:${pick.level ?? 'auto'}:${pick.visit}`,
+    () => loadBoard(pick.day, pick.level)
+  );
+  // Boards finished since they were loaded, so the level list is right without a reload.
+  const [finished, setFinished] = useState<Record<string, DayState>>({});
+  const [nav, setNav] = useState<{ visit: number; view: View; back: View } | null>(null);
   const [practiceDone, setPracticeDone] = useState(practiceSeen);
   const [practiceRun, setPracticeRun] = useState(0);
   const init = data?.init ?? null;
@@ -66,8 +89,8 @@ export const App = () => {
   const session = useMemo(() => {
     if (!init) return null;
     return init.loggedIn
-      ? remoteSession(init.day)
-      : localSession(init.board, guestKey(init.day));
+      ? remoteSession(init.day, init.level)
+      : localSession(init.board, guestKey(init.day, init.level));
   }, [init]);
   // A fresh practice session each time the practice board is opened.
   const practice = useMemo(
@@ -105,16 +128,42 @@ export const App = () => {
     );
   }
 
-  const state = progress && progress.day === init.day ? progress.state : data.state;
-  const firstVisit = state.status === 'new' && !init.tutorialDone && !practiceDone;
-  const home: View = isFinal(state) ? 'result' : firstVisit ? 'practice' : 'play';
-  const current = nav && nav.day === init.day ? nav : { day: init.day, view: home, back: home };
-  const show = (view: View) => setNav({ day: init.day, view, back: current.back });
+  const key = (level: Level) => `${init.day}:${level}`;
+  const state = finished[key(init.level)] ?? data.state;
+  const levels = data.levels.map((l) => {
+    const done = finished[key(l.level)];
+    return done ? { ...l, status: done.status, charges: done.attempts.length } : l;
+  });
+  const untouched = levels.every((l) => l.status === 'new');
+  const firstVisit = untouched && !init.tutorialDone && !practiceDone;
+  // Opening the post lands on the level list; picking a level lands on its board or report.
+  const home: View = firstVisit
+    ? 'practice'
+    : pick.level === null
+      ? 'levels'
+      : isFinal(state)
+        ? 'result'
+        : 'play';
+  const current = nav && nav.visit === pick.visit ? nav : { visit: pick.visit, view: home, back: home };
+  const show = (view: View) => setNav({ visit: pick.visit, view, back: current.back });
   /** Open a side page and remember where to come back to. */
-  const open = (view: View) => setNav({ day: init.day, view, back: current.view });
+  const open = (view: View) => setNav({ visit: pick.visit, view, back: current.view });
+  const enter = (day: number | null, level: Level | null) => {
+    setNav(null);
+    setPick((now) => ({ day, level, visit: now.visit + 1 }));
+  };
+  const toLevels = () => {
+    if (pick.level === null) show('levels');
+    else enter(init.day, null);
+  };
 
-  const title = `#${init.day} · ${shortDate(init.dayIndex)}`;
+  const date = `#${init.day} · ${shortDate(init.dayIndex)}`;
+  // Short enough for the play header on a narrow phone.
+  const title = `#${init.day} · ${LEVEL_LABEL[init.level]}`;
   const isToday = init.day === init.today;
+  const next = LEVELS.find(
+    (l) => l !== init.level && !isFinal({ ...NEW_DAY_STATE, status: levels.find((x) => x.level === l)?.status ?? 'new' })
+  );
   const elapsed =
     state.status === 'playing' && state.startedAt !== null
       ? Math.max(
@@ -137,21 +186,40 @@ export const App = () => {
           coach
           onReport={() => {
             endPractice();
-            show(isFinal(state) ? 'result' : 'play');
+            show(pick.level === null ? 'levels' : isFinal(state) ? 'result' : 'play');
           }}
+        />
+      );
+    case 'levels':
+      return (
+        <Levels
+          title={date}
+          isToday={isToday}
+          levels={levels}
+          streak={init.streak}
+          loggedIn={init.loggedIn}
+          onPick={(level) => enter(init.day, level)}
+          onArchive={() => open('archive')}
+          onLeaders={() => open('leaders')}
+          onHelp={() => open('howto')}
         />
       );
     case 'result':
       return (
         <Result
           day={init.day}
+          level={init.level}
           title={title}
+          date={shortDate(init.dayIndex)}
           state={state}
           loggedIn={init.loggedIn}
           username={init.username}
           isToday={isToday}
           subreddit={init.subreddit}
           nextAt={data.nextAt}
+          nextLevel={next ?? null}
+          onNextLevel={(level) => enter(init.day, level)}
+          onLevels={toLevels}
           onBoard={() => show('play')}
           onArchive={() => open('archive')}
           onLeaders={() => open('leaders')}
@@ -162,14 +230,18 @@ export const App = () => {
         <Archive
           current={init.day}
           onBack={() => show(current.back)}
-          onPick={(next) => {
-            if (next === init.day) show(isFinal(state) ? 'result' : 'play');
-            else setDay(next);
-          }}
+          onPick={(day) => enter(day, null)}
         />
       );
     case 'leaders':
-      return <Leaders day={init.day} today={init.today} onBack={() => show(current.back)} />;
+      return (
+        <Leaders
+          day={init.day}
+          today={init.today}
+          level={pick.level ?? 'easy'}
+          onBack={() => show(current.back)}
+        />
+      );
     case 'howto':
       return (
         <HowTo
@@ -193,7 +265,7 @@ export const App = () => {
     case 'play':
       return (
         <Play
-          key={`day-${init.day}`}
+          key={`board-${init.day}-${init.level}-${pick.visit}`}
           board={init.board}
           initial={state}
           session={session}
@@ -202,11 +274,11 @@ export const App = () => {
           tag={isToday ? null : 'archive'}
           elapsedAtOpen={elapsed}
           onReport={(final) => {
-            setProgress({ day: init.day, state: final });
+            setFinished((now) => ({ ...now, [key(init.level)]: final }));
             show('result');
           }}
           onHelp={() => open('howto')}
-          onMenu={() => open('archive')}
+          onMenu={toLevels}
         />
       );
   }

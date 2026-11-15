@@ -104,56 +104,87 @@ const main = async () => {
     await shot(page, '06-practice-solved', true);
     await page.locator('.btn-report').click();
 
-    // Today's board
+    // The day's three boards
+    await page.waitForSelector('.levels');
+    await shot(page, '07-levels');
+    await page.locator('.level').nth(0).click();
     await page.waitForSelector('.play:not(.is-coach)');
-    const init: InitResponse = await page.evaluate(() => fetch('/api/init').then((r) => r.json()));
+    const init: InitResponse = await page.evaluate(() =>
+      fetch('/api/init?level=easy').then((r) => r.json())
+    );
     const win = solve(init.board).solutions[0];
     if (!win) throw new Error('no solution');
-    await shot(page, '07-play-empty', true);
+    await shot(page, '08-easy-empty', true);
+
+    // Drag the first chip of the answer from the tray onto socket 1.
+    const firstChip = win[0];
+    if (!firstChip) throw new Error('empty solution');
+    const from = await page.locator(`.tray-chip[aria-label^="${CHIP_INFO[firstChip].label}:"]`).boundingBox();
+    const to = await page.locator('.socket').nth(0).boundingBox();
+    if (!from || !to) throw new Error('nothing to drag');
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, from.y - 30, { steps: 4 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await shot(page, '09-dragging', true);
+    await page.mouse.up();
+    const seated = await page.locator('.socket').nth(0).getAttribute('aria-label');
+    if (!seated?.includes(CHIP_INFO[firstChip].label)) problems.push(`drag did not seat the chip: ${seated}`);
+
     await place(page, init.board, wrongFor(init.board, win));
-    await shot(page, '08-play-filled', true);
     await page.locator('.btn-power').click();
-    await page.waitForTimeout(900);
-    await shot(page, '09-play-testing', true);
     await page.waitForSelector('.board:not(.is-running)', { timeout: 20_000 });
-    await shot(page, '10-play-failed', true);
-    await get('/dev/seed?n=37');
+    await shot(page, '10-easy-failed', true);
+    await get('/dev/seed?n=37&level=easy');
     await place(page, init.board, win);
     await power(page);
-    await shot(page, '11-play-solved', true);
+    await shot(page, '11-easy-solved', true);
     await page.locator('.btn-report').click();
     await page.waitForSelector('.slip');
     await page.waitForTimeout(700);
     await shot(page, '12-report');
-    await page.locator('.slip-btn').click();
+    await page.getByRole('button', { name: 'Share result' }).click();
     await shot(page, '13-report-confirm-share');
-    await page.locator('.slip-btn').click();
+    await page.getByRole('button', { name: 'Post as me' }).click();
     await page.waitForTimeout(500);
     await shot(page, '14-report-shared');
     await page.getByRole('button', { name: 'Leaders' }).click();
     await page.waitForSelector('.ranks, .notice');
     await shot(page, '15-leaders');
-    await page.getByRole('tab', { name: 'Streaks' }).click();
-    await shot(page, '16-leaders-streaks');
     await page.getByRole('button', { name: 'Back' }).click();
-    await page.goto(`${server.url}/splash.html`);
-    await shot(page, '17-splash-solved');
 
-    // Walk forward to Sunday for the largest board, blowing a fuse on the way.
+    // Medium, straight from the report
+    await page.getByRole('button', { name: 'Play Medium' }).click();
+    await page.waitForSelector('.play');
+    const medium: InitResponse = await page.evaluate(() =>
+      fetch('/api/init?level=medium').then((r) => r.json())
+    );
+    const mediumWin = solve(medium.board).solutions[0];
+    if (!mediumWin) throw new Error('no solution');
+    await place(page, medium.board, wrongFor(medium.board, mediumWin));
+    await shot(page, '16-medium-filled', true);
+    await page.getByRole('button', { name: "All of today's boards" }).click();
+    await page.waitForSelector('.levels');
+    await shot(page, '17-levels-one-done');
+    await page.goto(`${server.url}/splash.html`);
+    await shot(page, '18-splash-in-progress');
+
+    // Walk forward to Sunday for the largest board, and blow its fuse.
     let today: InitResponse = init;
     for (let guard = 0; guard < 8; guard++) {
       await get('/dev/advance?days=1');
-      today = (await get('/api/init')) as InitResponse;
+      today = (await get('/api/init?level=hard')) as InitResponse;
       if (weekdayOf(today.dayIndex) === 0) break;
     }
     await page.goto(`${server.url}/game.html`);
+    await page.waitForSelector('.levels');
+    await page.locator('.level').nth(2).click();
     await page.waitForSelector('.play');
     const big = today.board;
     const bigWin = solve(big).solutions[0];
     if (!bigWin) throw new Error('no solution');
-    await shot(page, '18-overclock-empty', true);
+    await shot(page, '19-overclock-empty', true);
     await place(page, big, wrongFor(big, bigWin));
-    await shot(page, '19-overclock-filled', true);
     await page.locator('.btn-power').click();
     await page.waitForTimeout(500);
     await page.locator('.zone-board').click(); // skip the replay
@@ -161,10 +192,6 @@ const main = async () => {
     await shot(page, '20-overclock-failed', true);
     await page.getByRole('button', { name: 'How to play' }).click();
     await shot(page, '21-howto');
-    await page.getByRole('button', { name: 'Back' }).click();
-    await page.getByRole('button', { name: 'Past boards' }).click();
-    await page.waitForSelector('.days');
-    await shot(page, '22-archive');
     await page.getByRole('button', { name: 'Back' }).click();
 
     // Blow the fuse: four more distinct wrong placements.
@@ -201,6 +228,11 @@ const main = async () => {
     await page.waitForSelector('.slip');
     await page.waitForTimeout(700);
     await shot(page, '25-report-fuse');
+    await page.getByRole('button', { name: 'All boards' }).click();
+    await page.waitForSelector('.levels');
+    await page.getByRole('button', { name: 'Past boards' }).click();
+    await page.waitForSelector('.days');
+    await shot(page, '22-archive');
     await phone.close();
 
     // Logged out
@@ -223,6 +255,8 @@ const main = async () => {
     await place(wide, TUTORIAL_BOARD, ['AND', 'OR']);
     await power(wide);
     await wide.locator('.btn-report').click();
+    await wide.waitForSelector('.levels');
+    await wide.locator('.level').nth(2).click();
     await wide.waitForSelector('.play:not(.is-coach)');
     await place(wide, big, wrongFor(big, bigWin));
     await shot(wide, '28-desktop-overclock', true);

@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { formatTime } from '../../shared/score';
+import { LEVELS, LEVEL_LABEL, type Level } from '../../shared/types';
 import { api } from '../api';
 import { Bolt, Chevron, Flame } from '../board/icons';
 import { useLoad } from '../hooks/useLoad';
 
-type Props = { day: number; today: number; onBack: () => void };
+type Props = { day: number; today: number; level: Level; onBack: () => void };
 type Scope = 'day' | 'streak';
 
-export const Leaders = ({ day, today, onBack }: Props) => {
+export const Leaders = ({ day, today, level: opened, onBack }: Props) => {
   const [scope, setScope] = useState<Scope>('day');
-  const { data, error: problem, retry } = useLoad(`leaders:${scope}:${day}`, () =>
-    api.leaderboard(scope, scope === 'day' ? day : null)
+  const [level, setLevel] = useState<Level>(opened);
+  const { data, error: problem, retry } = useLoad(`leaders:${scope}:${day}:${level}`, () =>
+    api.leaderboard(scope, scope === 'day' ? day : null, level)
   );
 
   return (
@@ -42,6 +44,22 @@ export const Leaders = ({ day, today, onBack }: Props) => {
           Streaks
         </button>
       </div>
+      {scope === 'day' && (
+        <div className="tabs tabs-3" role="tablist" aria-label="Level">
+          {LEVELS.map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="tab"
+              aria-selected={level === l}
+              className={`tab ${level === l ? 'is-on' : ''}`}
+              onClick={() => setLevel(l)}
+            >
+              {LEVEL_LABEL[l]}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="page-lede">
         {scope === 'day'
           ? 'Fewest charges first, then fastest. Only plays on the day itself are ranked.'

@@ -66,6 +66,7 @@ body {
   margin: 0 auto;
   padding: var(--s2) var(--s2) var(--s3);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
   grid-template-areas: 'bar' 'board' 'card' 'status' 'tray' 'power';
   gap: var(--s2);
@@ -135,6 +136,8 @@ body {
   letter-spacing: var(--track);
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .bar-tag {
   margin-left: var(--s2);
@@ -318,8 +321,42 @@ body {
   stroke: var(--ic-edge);
   stroke-width: 1;
 }
-.chip-top {
-  fill: var(--ic-top);
+.chip-icon {
+  --hue: var(--silk);
+}
+.chip-icon.is-AND {
+  --hue: var(--chip-both);
+}
+.chip-icon.is-OR {
+  --hue: var(--chip-either);
+}
+.chip-icon.is-XOR {
+  --hue: var(--chip-differ);
+}
+.chip-icon.is-NOT {
+  --hue: var(--chip-flip);
+}
+.chip-icon.is-NAND {
+  --hue: var(--chip-notboth);
+}
+.chip-icon.is-NOR {
+  --hue: var(--chip-neither);
+}
+.icon-on {
+  fill: var(--hue);
+}
+.icon-off {
+  fill: var(--ic);
+}
+.icon-ring {
+  fill: none;
+  stroke: var(--hue);
+  stroke-width: 1.4;
+}
+.icon-cut {
+  fill: none;
+  stroke: var(--ic);
+  stroke-width: 1.4;
 }
 .chip-notch {
   fill: var(--ic-edge);
@@ -719,6 +756,27 @@ body {
   stroke: var(--copper-hot);
   r: 4.2px;
   filter: drop-shadow(0 0 3px var(--amber-glow));
+}
+
+/* ---------- dragging ---------- */
+.tray-chip,
+.socket.is-filled {
+  touch-action: none;
+}
+.socket.is-lifted .seated {
+  opacity: 0.3;
+}
+.drag-ghost {
+  position: fixed;
+  z-index: 5;
+  width: 4.2rem;
+  margin: -2.6rem 0 0 -2.1rem;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 6px rgb(0 0 0 / 0.5));
+  rotate: -4deg;
+}
+.drag-ghost .chip-glyph {
+  max-width: none;
 }
 
 /* ---------- power bar ---------- */
@@ -1182,7 +1240,7 @@ body {
   min-height: 52px;
   padding: var(--s1) var(--s3);
   display: grid;
-  grid-template-columns: 4.2rem 1fr auto 3.4rem;
+  grid-template-columns: 4.2rem 1fr auto;
   align-items: center;
   gap: var(--s2);
   text-align: left;
@@ -1411,4 +1469,123 @@ body {
 .page > *,
 .result > * {
   flex: none;
+}
+
+/* ---------- the day's three boards ---------- */
+.levels .bar {
+  margin-bottom: var(--s1);
+}
+.level-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.level {
+  width: 100%;
+  min-height: 84px;
+  padding: var(--s3);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  text-align: left;
+  background: var(--pcb-700);
+  border: var(--line) solid var(--pcb-line);
+  border-left: 4px solid var(--copper);
+  border-radius: var(--r2);
+  transition: border-color var(--fast) var(--ease);
+}
+.level:hover {
+  border-color: var(--copper-hot);
+}
+.level.is-solved {
+  border-left-color: var(--amber);
+}
+.level.is-fused {
+  border-left-color: var(--bad);
+}
+.level-pips {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+.level-pips span {
+  width: 14px;
+  height: 8px;
+  border: var(--line) solid var(--silk-faint);
+  border-radius: var(--r1);
+}
+.level-pips span.is-on {
+  background: var(--copper-hot);
+  border-color: var(--copper-hot);
+}
+.level-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+.level-name {
+  font-size: var(--text-2xl);
+}
+.level-blurb {
+  font-size: var(--text-sm);
+  color: var(--silk-dim);
+}
+.level-state {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--amber);
+}
+.level-state .glyph-cross {
+  width: 1.2em;
+  height: 1.2em;
+}
+.level-go {
+  padding: var(--s1) var(--s2);
+  font-size: var(--text-sm);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--pcb-950);
+  background: var(--amber);
+  border-radius: var(--r1);
+}
+.levels-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+.levels-tier {
+  padding: 0 var(--s1);
+  font-size: var(--text-xs);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--pcb-950);
+  background: var(--silk);
+  border-radius: var(--r1);
+}
+.levels-count {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--silk-dim);
+}
+.tabs-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.day-marks {
+  display: flex;
+  gap: var(--s3);
+}
+.day-letter {
+  color: var(--silk-dim);
+  font-size: var(--text-xs);
 }

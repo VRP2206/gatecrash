@@ -36,6 +36,14 @@
   --tin: #c3c7cc;
   --tin-dim: #7c838a;
 
+  /* one hue per chip (shape differs too) */
+  --chip-both: #6fd3ff;
+  --chip-either: #9be37a;
+  --chip-differ: #ff9ad5;
+  --chip-flip: #f1e8d0;
+  --chip-notboth: #c9a6ff;
+  --chip-neither: #ff9d6b;
+
   /* signals */
   --ok: #86e09a;
   --bad: #ff7a6b;

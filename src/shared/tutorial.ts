@@ -7,6 +7,7 @@ import type { Board } from './types';
 export const TUTORIAL_BOARD: Board = {
   day: 0,
   date: '',
+  level: 'easy',
   difficulty: 'easy',
   inputs: 2,
   sockets: [

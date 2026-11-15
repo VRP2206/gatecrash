@@ -188,6 +188,13 @@ Server rules: reject `/api/power` if status is final; validate the placement aga
 > days); Mon–Thu allow up to 2 winning arrangements (mirror-image pairs are common); Tailwind was
 > dropped in favour of plain CSS on `tokens.css`; wires may skip at most one column. Stretch goals
 > (Workshop, realtime counter, sound) are not built.
+>
+> **Changes after the first hands-on test (15 Nov), which override §2 where they differ:**
+> each day now has **three boards (Easy, Medium, Hard)** in one post instead of one board whose
+> difficulty follows the weekday; Hard becomes Overclock on Sundays. Any one solve keeps the
+> streak, and a blown fuse no longer ends it (another level can still save the day). Histogram,
+> leaderboard and share line are per level. Chips have **their own pictogram and colour**, and
+> chips can be **dragged** from the tray to a socket and between sockets (tapping still works).
 
 Dates assume evenings + weekends. Each phase ends with something uploaded and playable.
 **Rule for every phase:** `npm run check` (typecheck + lint + tests) passes before moving on,

@@ -5,6 +5,7 @@ import {
   type Board,
   type DayState,
   type FullPlacement,
+  type Level,
 } from '../shared/types';
 import { api } from './api';
 
@@ -15,10 +16,10 @@ export type Session = {
   power(placement: FullPlacement): Promise<DayState>;
 };
 
-export const remoteSession = (day: number): Session => ({
+export const remoteSession = (day: number, level: Level): Session => ({
   kind: 'remote',
-  start: async () => (await api.start(day)).state,
-  power: async (placement) => (await api.power(day, placement)).state,
+  start: async () => (await api.start(day, level)).state,
+  power: async (placement) => (await api.power(day, level, placement)).state,
 });
 
 const read = (key: string): DayState | null => {
@@ -40,9 +41,11 @@ const write = (key: string, state: DayState): void => {
   }
 };
 
-export const guestKey = (day: number): string => `gatecrash:guest:${day}`;
+export const guestKey = (day: number, level: Level): string =>
+  `gatecrash:guest:${day}:${level}`;
 
-export const readGuestState = (day: number): DayState => read(guestKey(day)) ?? NEW_DAY_STATE;
+export const readGuestState = (day: number, level: Level): DayState =>
+  read(guestKey(day, level)) ?? NEW_DAY_STATE;
 
 /**
  * Same rules as the server, kept in the browser. Used for logged-out players

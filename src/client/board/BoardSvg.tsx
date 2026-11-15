@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties, type KeyboardEvent } from 'react';
+import { useMemo, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { inputOn, type Signals } from '../../shared/sim';
 import { CHIP_INFO, type Board, type ChipType, type Placement, type Source } from '../../shared/types';
 import { ChipBody } from './ChipArt';
@@ -27,6 +27,12 @@ type Props = {
   /** Show tick/cross badges on the bulbs for this row. */
   showVerdict: boolean;
   onSocket: (socket: number) => void;
+  /** Socket a dragged chip is hovering over. */
+  dropTarget?: number | null;
+  /** Socket whose chip is being dragged away. */
+  lifted?: number | null;
+  /** Pointer went down on a seated chip: the start of a possible drag. */
+  onGrab?: (event: PointerEvent, chip: ChipType, socket: number) => void;
 };
 
 const activate = (run: () => void) => (event: KeyboardEvent) => {
@@ -48,6 +54,9 @@ export const BoardSvg = ({
   running,
   showVerdict,
   onSocket,
+  dropTarget = null,
+  lifted = null,
+  onGrab,
 }: Props) => {
   const layout = useMemo(() => layoutBoard(board), [board]);
   const SOCKET_W = layout.socketW;
@@ -145,14 +154,17 @@ export const BoardSvg = ({
               chip ? 'is-filled' : 'is-empty',
               wires === 1 ? 'is-single' : '',
               invites ? 'is-open' : '',
-              armed === i ? 'is-armed' : '',
+              armed === i || dropTarget === i ? 'is-armed' : '',
+              lifted === i ? 'is-lifted' : '',
               out === 'on' ? 'is-on' : '',
             ].join(' ')}
             role="button"
             tabIndex={locked ? -1 : 0}
             aria-label={label}
             aria-disabled={locked}
+            data-socket={i}
             onClick={() => onSocket(i)}
+            onPointerDown={chip && onGrab ? (event) => onGrab(event, chip, i) : undefined}
             onKeyDown={activate(() => onSocket(i))}
           >
             <g key={shake} className={shake ? 'shake' : ''}>
@@ -175,7 +187,9 @@ export const BoardSvg = ({
                     y={p.y}
                     w={SOCKET_W}
                     h={SOCKET_H}
-                    fontSize={tight ? (CHIP_INFO[chip].label.length > 6 ? 8.6 : 9.6) : 10.5}
+                    fontSize={
+                      CHIP_INFO[chip].label.length > 6 ? (tight ? 7.2 : 8.6) : tight ? 8.6 : 9.6
+                    }
                   />
                 </g>
               ) : (

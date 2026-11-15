@@ -1,4 +1,4 @@
-import { MAX_CHARGES, type DayState } from './types';
+import { LEVEL_LABEL, MAX_CHARGES, type DayState, type Level } from './types';
 
 /** m:ss, capped at 99:59. */
 export const formatTime = (seconds: number): string => {
@@ -22,16 +22,17 @@ export const splitRankScore = (score: number): { charges: number; seconds: numbe
 
 /**
  * Spoiler-free result line for the comment thread,
- * e.g. `Gatecrash #12 ⚡⚡▫▫▫ 0:48`.
+ * e.g. `Gatecrash #12 Hard ⚡⚡▫▫▫ 0:48`.
  */
 export const shareLine = (
   day: number,
+  level: Level,
   state: Pick<DayState, 'status' | 'attempts' | 'startedAt' | 'endedAt'>,
   streak = 0
 ): string => {
   const used = state.attempts.length;
   const meter = '⚡'.repeat(used) + '▫'.repeat(Math.max(0, MAX_CHARGES - used));
-  const head = `Gatecrash #${day}`;
+  const head = `Gatecrash #${day} ${LEVEL_LABEL[level]}`;
   const tail = streak >= 2 ? ` · streak ${streak}` : '';
   if (state.status === 'solved') {
     return `${head} ${meter} ${formatTime(secondsTaken(state))}${tail}`;

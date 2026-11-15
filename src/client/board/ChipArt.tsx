@@ -9,7 +9,94 @@ const BEATS: readonly (readonly [boolean, boolean])[] = [
   [true, true],
 ];
 
-const lines = (chip: ChipType): string[] => CHIP_INFO[chip].label.split(' ');
+/*
+ * One pictogram per chip, drawn as two overlapping rings: the shaded part is
+ * when the chip is on. BOTH shades only the overlap, EITHER shades everything
+ * inside, DIFFER leaves the overlap empty; NOT BOTH and NEITHER add a shaded
+ * plate behind for "on when nothing is". FLIP is a half-shaded disc. Each chip
+ * also has its own colour, but the shapes alone tell them apart.
+ */
+const LENS = 'M12 3.39A5.5 5.5 0 0 1 12 12.61A5.5 5.5 0 0 1 12 3.39z';
+
+type IconProps = { chip: ChipType; x: number; y: number; scale: number };
+
+/** Drawn in a 24x16 box centred on (x, y). */
+export const ChipIcon = ({ chip, x, y, scale }: IconProps) => {
+  const rings = (
+    <>
+      <circle className="icon-ring" cx={9} cy={8} r={5.5} />
+      <circle className="icon-ring" cx={15} cy={8} r={5.5} />
+    </>
+  );
+  let art;
+  switch (chip) {
+    case 'AND':
+      art = (
+        <>
+          <path className="icon-on" d={LENS} />
+          {rings}
+        </>
+      );
+      break;
+    case 'OR':
+      art = (
+        <>
+          <circle className="icon-on" cx={9} cy={8} r={5.5} />
+          <circle className="icon-on" cx={15} cy={8} r={5.5} />
+          {rings}
+        </>
+      );
+      break;
+    case 'XOR':
+      art = (
+        <>
+          <circle className="icon-on" cx={9} cy={8} r={5.5} />
+          <circle className="icon-on" cx={15} cy={8} r={5.5} />
+          <path className="icon-off" d={LENS} />
+          {rings}
+        </>
+      );
+      break;
+    case 'NAND':
+      art = (
+        <>
+          <rect className="icon-on" x={0.5} y={0.5} width={23} height={15} rx={2.5} />
+          <path className="icon-off" d={LENS} />
+          <circle className="icon-cut" cx={9} cy={8} r={5.5} />
+          <circle className="icon-cut" cx={15} cy={8} r={5.5} />
+        </>
+      );
+      break;
+    case 'NOR':
+      art = (
+        <>
+          <rect className="icon-on" x={0.5} y={0.5} width={23} height={15} rx={2.5} />
+          <circle className="icon-off" cx={9} cy={8} r={5.5} />
+          <circle className="icon-off" cx={15} cy={8} r={5.5} />
+          <circle className="icon-cut" cx={9} cy={8} r={5.5} />
+          <circle className="icon-cut" cx={15} cy={8} r={5.5} />
+        </>
+      );
+      break;
+    case 'NOT':
+      art = (
+        <>
+          <path className="icon-on" d="M12 1.5a6.5 6.5 0 0 1 0 13z" />
+          <circle className="icon-ring" cx={12} cy={8} r={6.5} />
+          <path className="icon-ring" d="M12 1.5v13" />
+        </>
+      );
+      break;
+  }
+  return (
+    <g
+      className={`chip-icon is-${chip}`}
+      transform={`translate(${x - 12 * scale} ${y - 8 * scale}) scale(${scale})`}
+    >
+      {art}
+    </g>
+  );
+};
 
 type BodyProps = {
   chip: ChipType;
@@ -18,35 +105,30 @@ type BodyProps = {
   y: number;
   w: number;
   h: number;
+  /** 0 hides the name and lets the icon fill the package. */
   fontSize: number;
 };
 
-/** The black IC package: body, pin-1 notch and etched label. Drawn in the caller's SVG. */
+/** The black IC package: body, pin-1 notch, pictogram and etched name. Drawn in the caller's SVG. */
 export const ChipBody = ({ chip, x, y, w, h, fontSize }: BodyProps) => {
-  const text = lines(chip);
-  const leading = fontSize * 1.05;
-  const first = y - ((text.length - 1) * leading) / 2;
+  const named = fontSize > 0;
   return (
     <g className="chip">
       <rect className="chip-body" x={x - w / 2} y={y - h / 2} width={w} height={h} rx={2} />
-      <rect className="chip-top" x={x - w / 2 + 2} y={y - h / 2 + 2} width={w - 4} height={h * 0.34} rx={1} />
-      <path
-        className="chip-notch"
-        d={`M${x - w / 2} ${y - 4}a4 4 0 0 1 0 8z`}
-      />
-      {fontSize > 0 && text.map((line, i) => (
+      <path className="chip-notch" d={`M${x - w / 2} ${y - 4}a4 4 0 0 1 0 8z`} />
+      <ChipIcon chip={chip} x={x + 1} y={named ? y - h * 0.16 : y} scale={named ? h / 34 : h / 24} />
+      {named && (
         <text
-          key={line}
           className="chip-label"
-          x={x + 2}
-          y={first + i * leading}
+          x={x + 1}
+          y={y + h * 0.31}
           fontSize={fontSize}
           textAnchor="middle"
           dominantBaseline="central"
         >
-          {line}
+          {CHIP_INFO[chip].label}
         </text>
-      ))}
+      )}
     </g>
   );
 };
@@ -93,7 +175,7 @@ export const ChipGlyph = ({ chip, beat, bare = false, className = '' }: GlyphPro
         y={20}
         w={46}
         h={34}
-        fontSize={bare ? 0 : lines(chip).length > 1 ? 9 : CHIP_INFO[chip].label.length > 6 ? 8.2 : 9.5}
+        fontSize={bare ? 0 : CHIP_INFO[chip].label.length > 6 ? 7 : 8.5}
       />
     </svg>
   );

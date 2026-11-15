@@ -1,6 +1,7 @@
 import { Hono, type Context as HonoContext } from 'hono';
 import type { UiResponse } from '@devvit/web/shared';
 import type { ErrorResponse } from '../shared/api';
+import { asLevel, type Level } from '../shared/types';
 import { createGame, GameError } from './game';
 import type { Caller, Ports } from './ports';
 
@@ -31,6 +32,12 @@ const requireDay = (value: unknown): number => {
   return day;
 };
 
+const requireLevel = (value: unknown): Level => {
+  const level = asLevel(value);
+  if (!level) throw new GameError(400, 'no-level', 'Missing board level.');
+  return level;
+};
+
 /**
  * All HTTP routes. `/api/*` is called by the client; `/internal/*` only by the
  * platform (scheduler, menu, triggers).
@@ -51,23 +58,31 @@ export const createApp = (ports: Ports, getCaller: () => Caller): Hono => {
   });
 
   app.get('/api/init', async (c) =>
-    c.json(await game.init(getCaller(), dayParam(c.req.query('day'))))
+    c.json(
+      await game.init(getCaller(), dayParam(c.req.query('day')), asLevel(c.req.query('level')))
+    )
   );
   app.get('/api/splash', async (c) => c.json(await game.splash(getCaller())));
   app.post('/api/start', async (c) => {
     const body = await readJson(c);
-    return c.json(await game.start(getCaller(), requireDay(body.day)));
+    return c.json(await game.start(getCaller(), requireDay(body.day), requireLevel(body.level)));
   });
   app.post('/api/power', async (c) => {
     const body = await readJson(c);
-    return c.json(await game.power(getCaller(), requireDay(body.day), body.placement));
+    return c.json(await game.power(getCaller(), requireDay(body.day), requireLevel(body.level), body.placement));
   });
   app.get('/api/result', async (c) =>
-    c.json(await game.result(getCaller(), dayParam(c.req.query('day'))))
+    c.json(
+      await game.result(
+        getCaller(),
+        dayParam(c.req.query('day')),
+        requireLevel(c.req.query('level'))
+      )
+    )
   );
   app.post('/api/share', async (c) => {
     const body = await readJson(c);
-    return c.json(await game.share(getCaller(), requireDay(body.day)));
+    return c.json(await game.share(getCaller(), requireDay(body.day), requireLevel(body.level)));
   });
   app.post('/api/join', async (c) => c.json(await game.join(getCaller())));
   app.post('/api/forget', async (c) => c.json(await game.forget(getCaller())));
@@ -78,7 +93,8 @@ export const createApp = (ports: Ports, getCaller: () => Caller): Hono => {
       await game.leaderboard(
         getCaller(),
         c.req.query('scope') === 'streak' ? 'streak' : 'day',
-        dayParam(c.req.query('day'))
+        dayParam(c.req.query('day')),
+        asLevel(c.req.query('level')) ?? 'easy'
       )
     )
   );

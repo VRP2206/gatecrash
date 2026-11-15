@@ -1,23 +1,25 @@
 # Gatecrash
 
-**A daily circuit puzzle for Reddit.** Every day there is one small circuit board with empty
-sockets. Drop the right chips into them so the bulbs light exactly as the test card says, and do
-it with as few "power-ons" as you can. A board takes one to three minutes.
+**A daily circuit puzzle for Reddit.** Every day there are three small circuit boards (easy,
+medium and hard) with empty sockets. Drop the right chips into them so the bulbs light exactly as
+the test card says, and do it with as few "power-ons" as you can. A board takes one to three
+minutes.
 
 Built on Devvit Web for Reddit's Game of the Day hackathon. It runs as an interactive post: a new
 post appears in the community every day at midnight UTC.
 
-![The play screen](docs/shots/10-play-failed.png)
+![The play screen](docs/shots/10-easy-failed.png)
 
 ## How to play
 
 1. **Open today's post and tap Play.** First time, you get a two-chip practice board with three
-   short hints.
+   short hints. Then pick a board: Easy, Medium or Hard. You can play all three.
 2. **Read the test card.** Each row shows a setting of the switches on the left and which bulbs
    should be lit for it.
-3. **Seat the chips.** Tap a chip in the tray, then tap a socket. Tap a seated chip to take it
-   back. Each chip shows what it does on its own legs (wires in on the left, result on the right),
-   and has a plain name:
+3. **Seat the chips.** Drag a chip from the tray onto a socket, or tap the chip and then the
+   socket. Drag a seated chip to another socket to move it, or tap it to take it back. Each chip
+   has its own picture and colour, shows what it does on its own legs (wires in on the left,
+   result on the right), and has a plain name:
 
    | Chip | What it does |
    |---|---|
@@ -25,8 +27,10 @@ post appears in the community every day at midnight UTC.
    | EITHER | On when at least one wire is on |
    | DIFFER | On when exactly one wire is on |
    | FLIP | Turns on into off, and off into on |
-   | NOT BOTH | Off only when both wires are on (Sundays) |
-   | NEITHER | On only when both wires are off (Sundays) |
+   | NOT BOTH | Off only when both wires are on (Sunday's hard board) |
+   | NEITHER | On only when both wires are off (Sunday's hard board) |
+
+   The pictures are two overlapping rings; the shaded part is when the chip is on.
 
 4. **Watch the live row.** One row of the card is wired to the bench for free: the board shows
    its signals and whether its bulbs are right as you move chips around.
@@ -37,26 +41,30 @@ post appears in the community every day at midnight UTC.
 
 No electronics knowledge is needed, and nothing on screen uses engineering terms.
 
-### The week
+### Three boards a day
 
-| Day | Board |
+| Level | Board |
 |---|---|
-| Mon–Tue | Warm-up: 2 switches, 3–4 sockets, exactly the chips you need |
-| Wed–Thu | Standard: 3 switches, 4–5 sockets, exactly the chips you need |
-| Fri–Sat | Tricky: 3 switches, 5–6 sockets, one or two decoy chips |
-| Sun | Overclock: 4 switches, 6–7 sockets, decoys, and the NOT BOTH / NEITHER chips |
+| Easy | 2 switches, 3–4 sockets, exactly the chips you need |
+| Medium | 3 switches, 4–5 sockets, exactly the chips you need |
+| Hard | 3 switches, 5–6 sockets, one or two spare chips that do not belong |
+| Hard on Sundays ("Overclock") | 4 switches, 6–7 sockets, spare chips, and the NOT BOTH / NEITHER chips |
+
+Solving any one of the day's boards keeps your streak. Each level has its own histogram and
+leaderboard.
 
 ## What Reddit adds
 
-- **One post a day**, created by the scheduler and titled `Gatecrash #N — Weekday`.
+- **One post a day** holding that day's three boards, created by the scheduler and titled
+  `Gatecrash #N — Weekday`.
 - **Test report** after each board: charges used, time, streak, and a histogram of how everyone
   did on that board, with your column marked.
 - **Share to the thread** (optional): one tap shows the exact line, a second tap posts it from
-  your account as a reply to the pinned results comment, e.g. `Gatecrash #12 ⚡⚡▫▫▫ 0:48`. The line
+  your account as a reply to the pinned results comment, e.g. `Gatecrash #12 Hard ⚡⚡▫▫▫ 0:48`. The line
   never contains the answer.
-- **Streaks and flair**: solve on consecutive days to build a streak; your user flair in the
+- **Streaks and flair**: solve at least one board on consecutive days to build a streak; your user flair in the
   community shows the tier and count (Spark, Tinkerer, Apprentice, Technician, Engineer, Wizard).
-- **Leaderboards**: today (fewest charges, then fastest) and longest running streaks.
+- **Leaderboards**: today, per level (fewest charges, then fastest), and longest running streaks.
 - **Past boards**: every earlier day is playable from the archive. Archive plays never affect
   streaks or the day's leaderboard.
 - **Join button** on the report, never during play. Sharing, joining and playing are always
@@ -81,8 +89,8 @@ account needs its default moderator permissions. There are no settings to config
 
 ## How the daily board is made
 
-Boards are generated, not hand-written. For day *N* the server seeds a random generator from the
-day number, the date and a per-community salt, then:
+Boards are generated, not hand-written. For each level of day *N* the server seeds a random
+generator from the day number, the date, the level and a per-community salt, then:
 
 1. builds a small layered circuit (switches → one to three columns of sockets → bulbs);
 2. fills it with random chips; that is the reference answer and defines the test card;
@@ -90,7 +98,7 @@ day number, the date and a per-community salt, then:
 4. **rejects and retries** unless the board is fair: no bulb or wire stuck on or off, no chip that
    just passes a wire through, every switch and every socket matters, bulbs differ from each other,
    and a brute-force solver confirms there are at most 2 winning arrangements (3 on Fri–Sun) among
-   at least 6 / 20 / 60 / 150 legal ones, by difficulty.
+   at least 6 / 20 / 60 / 150 legal ones (easy / medium / hard / Overclock).
 
 The board is stored the first time it is needed and never changes afterwards. The target is
 public, so the server's job is honest counting (charges, time, streak), not secrecy: every Power
@@ -102,7 +110,7 @@ press is re-simulated on the server and the placement is checked against the tra
   is one SVG, and the animation is the copper traces themselves.
 - **`src/shared`** is the engine, pure TypeScript with no platform imports: generator, simulator,
   solver, calendar, scoring, streaks. A property test checks every reject rule over 2,000
-  consecutive days.
+  consecutive days at all three levels.
 - **`src/server`**: `app.ts` (routes), `game.ts` (rules), `store.ts` (the only Redis user),
   `reddit.ts` (the only Reddit API user). The rules are written against small port types, so the
   same code runs on Reddit, in tests and in the local harness.

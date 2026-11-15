@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { ResultResponse } from '../../shared/api';
 import { formatTime, histogramTotal, secondsTaken, shareLine } from '../../shared/score';
-import { MAX_CHARGES, type DayState } from '../../shared/types';
+import { LEVEL_LABEL, MAX_CHARGES, type DayState, type Level } from '../../shared/types';
 import { api, messageOf } from '../api';
 import { Bolt, Flame } from '../board/icons';
 import { useLoad } from '../hooks/useLoad';
@@ -9,7 +9,9 @@ import { openUrl, promptLogin, toast } from '../platform';
 
 type Props = {
   day: number;
+  level: Level;
   title: string;
+  date: string;
   /** Final state as the client knows it (the only copy for logged-out players). */
   state: DayState;
   loggedIn: boolean;
@@ -18,6 +20,10 @@ type Props = {
   subreddit: string | null;
   /** Client clock time of the next board. */
   nextAt: number;
+  /** Another of the day's boards that is still open, if any. */
+  nextLevel: Level | null;
+  onNextLevel: (level: Level) => void;
+  onLevels: () => void;
   onBoard: () => void;
   onArchive: () => void;
   onLeaders: () => void;
@@ -44,18 +50,23 @@ const useCountdown = (until: number): string => {
 
 export const Result = ({
   day,
+  level,
   title,
+  date,
   state,
   loggedIn,
   username,
   isToday,
   subreddit,
   nextAt,
+  nextLevel,
+  onNextLevel,
+  onLevels,
   onBoard,
   onArchive,
   onLeaders,
 }: Props) => {
-  const loaded = useLoad(`result:${day}`, () => api.result(day));
+  const loaded = useLoad(`result:${day}:${level}`, () => api.result(day, level));
   const data: ResultResponse | null = loaded.data;
   const setData = loaded.patch;
   const [failure, setProblem] = useState<string | null>(null);
@@ -71,7 +82,7 @@ export const Result = ({
   const histogram = data?.histogram ?? null;
   const total = histogram ? histogramTotal(histogram) : 0;
   const peak = histogram ? Math.max(1, ...histogram) : 1;
-  const line = data && loggedIn ? data.shareLine : shareLine(day, state);
+  const line = data && loggedIn ? data.shareLine : shareLine(day, level, state);
   const shared = data?.shared === true;
   const joined = data?.joined === true;
   const canShare = data?.canShare === true && !shared;
@@ -79,7 +90,7 @@ export const Result = ({
   const share = async () => {
     setBusy(true);
     try {
-      const done = await api.share(day);
+      const done = await api.share(day, level);
       setThreadUrl(done.url);
       setData((d) => ({ ...d, shared: true }));
       setConfirming(false);
@@ -107,24 +118,27 @@ export const Result = ({
   const standing = (): string => {
     if (!histogram) return problem ? 'Could not load how others did.' : 'Counting results…';
     if (total <= 1) return solved ? 'First to clear this board.' : 'First to finish this board.';
-    if (data?.rank && isToday) return `Place ${data.rank} of ${data.ranked} today.`;
+    if (data?.rank && isToday) return `Place ${data.rank} of ${data.ranked} on ${LEVEL_LABEL[level]} today.`;
     if (solved && data) return `Used fewer charges than ${data.beat}% of ${total} players.`;
     return `${total} players have finished this board.`;
   };
 
   // One primary action, picked by what is still worth doing.
-  let primary: { label: string; run: () => void } ;
-  if (!loggedIn) primary = { label: 'Log in to keep a streak', run: promptLogin };
+  let primary: { label: string; run: () => void };
+  if (nextLevel) {
+    primary = { label: `Play ${LEVEL_LABEL[nextLevel]}`, run: () => onNextLevel(nextLevel) };
+  } else if (!loggedIn) primary = { label: 'Log in to keep a streak', run: promptLogin };
   else if (canShare) primary = { label: 'Share result', run: () => setConfirming(true) };
   else if (!joined && subreddit) primary = { label: `Join r/${subreddit}`, run: () => void join() };
   else primary = { label: 'Past boards', run: onArchive };
+  const offerShare = canShare && primary.label !== 'Share result' && !confirming;
 
   return (
     <main className="result">
       <article className={`slip ${solved ? 'is-pass' : 'is-fail'}`} aria-label="Test report">
         <header className="slip-head">
           <div>
-            <p className="slip-kicker">Gatecrash test report</p>
+            <p className="slip-kicker">Report · {date}</p>
             <h1 className="display slip-title">{title}</h1>
           </div>
           <p className="display stamp" aria-label={solved ? 'Passed' : 'Fuse blown'}>
@@ -225,14 +239,17 @@ export const Result = ({
       </article>
 
       <nav className="result-nav" aria-label="More">
-        <button type="button" className="link" onClick={onBoard}>
-          Board
-        </button>
-        {primary.label !== 'Past boards' && (
-          <button type="button" className="link" onClick={onArchive}>
-            Past boards
+        {offerShare && (
+          <button type="button" className="link" onClick={() => setConfirming(true)}>
+            Share result
           </button>
         )}
+        <button type="button" className="link" onClick={onLevels}>
+          All boards
+        </button>
+        <button type="button" className="link" onClick={onBoard}>
+          This board
+        </button>
         <button type="button" className="link" onClick={onLeaders}>
           Leaders
         </button>

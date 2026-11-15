@@ -95,101 +95,103 @@ describe('playing', () => {
     const { postId } = await w.game.ensureDailyPost();
     w.nextDay();
     await w.game.ensureDailyPost();
-    const init = await w.game.init(caller('ada', postId), null);
+    const init = await w.game.init(caller('ada', postId), null, 'easy');
     expect(init.day).toBe(1);
     expect(init.today).toBe(2);
     expect(init.board).not.toHaveProperty('solution');
     expect(init.state.status).toBe('new');
-    expect((await w.game.init(caller('ada'), null)).day).toBe(2);
+    expect((await w.game.init(caller('ada'), null, 'easy')).day).toBe(2);
   });
 
   it('solves, records stats, streak, leaderboard and flair', async () => {
     const w = world();
     const ada = caller('ada');
-    const { board } = await w.game.init(ada, null);
+    const { board } = await w.game.init(ada, null, 'easy');
     const { win, lose } = answers(board);
 
-    await w.game.start(ada, 1);
+    await w.game.start(ada, 1, 'easy');
     w.clock.ms += 30_000;
-    const miss = await w.game.power(ada, 1, lose);
+    const miss = await w.game.power(ada, 1, 'easy', lose);
     expect(miss.state.status).toBe('playing');
     expect(miss.chargesLeft).toBe(MAX_CHARGES - 1);
     expect(miss.rows.some((r) => !r.ok)).toBe(true);
 
     w.clock.ms += 18_000;
-    const hit = await w.game.power(ada, 1, win);
+    const hit = await w.game.power(ada, 1, 'easy', win);
     expect(hit.state.status).toBe('solved');
     expect(hit.rows.every((r) => r.ok)).toBe(true);
 
-    const result = await w.game.result(ada, 1);
+    const result = await w.game.result(ada, 1, 'easy');
     expect(result.histogram).toEqual([0, 1, 0, 0, 0, 0]);
     expect(result.players).toBe(1);
     expect(result.rank).toBe(1);
     expect(result.streak).toEqual({ current: 1, best: 1, tier: 'Spark' });
-    expect(result.shareLine).toBe('Gatecrash #1 ⚡⚡▫▫▫ 0:48');
+    expect(result.shareLine).toBe('Gatecrash #1 Easy ⚡⚡▫▫▫ 0:48');
     expect(w.reddit.flairs.get('ada')).toBe('Spark · 1');
 
-    await expect(w.game.power(ada, 1, win)).rejects.toMatchObject({ code: 'finished' });
+    await expect(w.game.power(ada, 1, 'easy', win)).rejects.toMatchObject({ code: 'finished' });
   });
 
   it('restores an unfinished game exactly', async () => {
     const w = world();
     const ada = caller('ada');
-    const { board } = await w.game.init(ada, null);
+    const { board } = await w.game.init(ada, null, 'easy');
     const { lose } = answers(board);
-    await w.game.power(ada, 1, lose);
-    const again = await w.game.init(ada, null);
+    await w.game.power(ada, 1, 'easy', lose);
+    const again = await w.game.init(ada, null, 'easy');
     expect(again.state.status).toBe('playing');
     expect(again.state.attempts).toEqual([lose]);
   });
 
-  it('blows the fuse after five misses and ends the streak', async () => {
+  it('blows the fuse after five misses without ending the streak', async () => {
     const w = world();
     const ada = caller('ada');
-    const day1 = await w.game.init(ada, null);
-    await w.game.power(ada, 1, answers(day1.board).win);
+    const day1 = await w.game.init(ada, null, 'easy');
+    await w.game.power(ada, 1, 'easy', answers(day1.board).win);
     w.nextDay();
-    const day2 = await w.game.init(ada, null);
+    const day2 = await w.game.init(ada, null, 'easy');
     const { lose } = answers(day2.board);
-    for (let i = 0; i < MAX_CHARGES; i++) await w.game.power(ada, 2, lose);
-    const result = await w.game.result(ada, 2);
+    for (let i = 0; i < MAX_CHARGES; i++) await w.game.power(ada, 2, 'easy', lose);
+    const result = await w.game.result(ada, 2, 'easy');
     expect(result.state.status).toBe('fused');
     expect(result.histogram).toEqual([0, 0, 0, 0, 0, 1]);
     expect(result.rank).toBeNull();
-    expect(result.streak.current).toBe(0);
-    expect(result.streak.best).toBe(1);
-    expect(result.shareLine).toBe('Gatecrash #2 ⚡⚡⚡⚡⚡ fuse blown');
+    // A blown fuse does not end the run: another of today's boards can still save it.
+    expect(result.streak.current).toBe(1);
+    await w.game.power(ada, 2, 'medium', answers((await w.game.init(ada, 2, 'medium')).board).win);
+    expect((await w.game.result(ada, 2, 'medium')).streak.current).toBe(2);
+    expect(result.shareLine).toBe('Gatecrash #2 Easy ⚡⚡⚡⚡⚡ fuse blown');
   });
 
   it('rejects illegal placements and unknown days', async () => {
     const w = world();
     const ada = caller('ada');
-    const { board } = await w.game.init(ada, null);
+    const { board } = await w.game.init(ada, null, 'easy');
     const bad = board.sockets.map(() => 'NAND');
-    await expect(w.game.power(ada, 1, bad)).rejects.toBeInstanceOf(GameError);
-    await expect(w.game.power(ada, 1, 'nope')).rejects.toMatchObject({ code: 'bad-placement' });
-    await expect(w.game.init(ada, 2)).rejects.toMatchObject({ code: 'no-such-day' });
-    await expect(w.game.init(ada, 0)).rejects.toMatchObject({ code: 'no-such-day' });
+    await expect(w.game.power(ada, 1, 'easy', bad)).rejects.toBeInstanceOf(GameError);
+    await expect(w.game.power(ada, 1, 'easy', 'nope')).rejects.toMatchObject({ code: 'bad-placement' });
+    await expect(w.game.init(ada, 2, 'easy')).rejects.toMatchObject({ code: 'no-such-day' });
+    await expect(w.game.init(ada, 0, 'easy')).rejects.toMatchObject({ code: 'no-such-day' });
   });
 
   it('keeps two players independent and shows both in the histogram', async () => {
     const w = world();
     const ada = caller('ada');
     const bob = caller('bob');
-    const { board } = await w.game.init(ada, null);
+    const { board } = await w.game.init(ada, null, 'easy');
     const { win, lose } = answers(board);
-    await w.game.power(ada, 1, win);
+    await w.game.power(ada, 1, 'easy', win);
     w.clock.ms += 5000;
-    await w.game.power(bob, 1, lose);
-    await w.game.power(bob, 1, win);
-    const result = await w.game.result(bob, 1);
+    await w.game.power(bob, 1, 'easy', lose);
+    await w.game.power(bob, 1, 'easy', win);
+    const result = await w.game.result(bob, 1, 'easy');
     expect(result.histogram).toEqual([1, 1, 0, 0, 0, 0]);
     expect(result.players).toBe(2);
     expect(result.rank).toBe(2);
     expect(result.ranked).toBe(2);
-    expect((await w.game.result(ada, 1)).beat).toBe(100);
+    expect((await w.game.result(ada, 1, 'easy')).beat).toBe(100);
 
-    const board1 = await w.game.leaderboard(bob, 'day', 1);
+    const board1 = await w.game.leaderboard(bob, 'day', 1, 'easy');
     expect(board1).toMatchObject({ scope: 'day', rank: 2, total: 2 });
     if (board1.scope === 'day') {
       expect(board1.rows.map((r) => [r.name, r.charges, r.you])).toEqual([
@@ -200,14 +202,56 @@ describe('playing', () => {
   });
 });
 
+describe('three levels a day', () => {
+  it('keeps each level separate and counts the day once for the streak', async () => {
+    const w = world();
+    const ada = caller('ada');
+    const first = await w.game.init(ada, null, null);
+    expect(first.level).toBe('easy');
+    expect(first.levels.map((l) => [l.level, l.difficulty, l.status])).toEqual([
+      ['easy', 'easy', 'new'],
+      ['medium', 'medium', 'new'],
+      ['hard', 'hard', 'new'],
+    ]);
+    const boards = {
+      easy: (await w.game.init(ada, 1, 'easy')).board,
+      medium: (await w.game.init(ada, 1, 'medium')).board,
+      hard: (await w.game.init(ada, 1, 'hard')).board,
+    };
+    expect([boards.easy.inputs, boards.medium.inputs, boards.hard.inputs]).toEqual([2, 3, 3]);
+
+    await w.game.power(ada, 1, 'easy', answers(boards.easy).win);
+    // With easy done, the post now opens on the next board still to play.
+    const next = await w.game.init(ada, null, null);
+    expect(next.level).toBe('medium');
+    expect(next.state.status).toBe('new');
+
+    await w.game.power(ada, 1, 'hard', answers(boards.hard).lose);
+    await w.game.power(ada, 1, 'hard', answers(boards.hard).win);
+    const hard = await w.game.result(ada, 1, 'hard');
+    expect(hard.histogram).toEqual([0, 1, 0, 0, 0, 0]);
+    expect(hard.streak.current).toBe(1);
+    expect(hard.shareLine.startsWith('Gatecrash #1 Hard ⚡⚡▫▫▫')).toBe(true);
+    expect((await w.game.result(ada, 1, 'easy')).histogram).toEqual([1, 0, 0, 0, 0, 0]);
+    expect((await w.game.result(ada, 1, 'medium')).histogram).toEqual([0, 0, 0, 0, 0, 0]);
+    expect((await w.game.splash(ada)).levels.map((l) => [l.status, l.charges])).toEqual([
+      ['solved', 1],
+      ['new', 0],
+      ['solved', 2],
+    ]);
+    const top = await w.game.leaderboard(ada, 'day', 1, 'hard');
+    expect(top.scope === 'day' && top.rows.map((r) => [r.name, r.charges])).toEqual([['ada', 2]]);
+  });
+});
+
 describe('streaks and the archive', () => {
   it('extends across days, ignores archive plays, drops lapsed runs', async () => {
     const w = world();
     const ada = caller('ada');
     const bob = caller('bob');
     const solveToday = async (who: typeof ada, day: number) => {
-      const { board } = await w.game.init(who, day);
-      return w.game.power(who, day, answers(board).win);
+      const { board } = await w.game.init(who, day, 'easy');
+      return w.game.power(who, day, 'easy', answers(board).win);
     };
 
     await solveToday(ada, 1);
@@ -217,28 +261,28 @@ describe('streaks and the archive', () => {
     // Bob catches up on yesterday's board from the archive: no streak credit.
     const late = await solveToday(bob, 1);
     expect(late.state.live).toBe(false);
-    expect((await w.game.result(bob, 1)).rank).toBeNull();
-    expect((await w.game.result(bob, 2)).streak.current).toBe(1);
-    expect((await w.game.result(ada, 2)).streak.current).toBe(2);
+    expect((await w.game.result(bob, 1, 'easy')).rank).toBeNull();
+    expect((await w.game.result(bob, 2, 'easy')).streak.current).toBe(1);
+    expect((await w.game.result(ada, 2, 'easy')).streak.current).toBe(2);
     expect(w.reddit.flairs.get('ada')).toBe('Spark · 2');
 
-    let top = await w.game.leaderboard(ada, 'streak', null);
+    let top = await w.game.leaderboard(ada, 'streak', null, 'easy');
     expect(top.scope === 'streak' && top.rows.map((r) => [r.name, r.streak])).toEqual([
       ['ada', 2],
       ['bob', 1],
     ]);
 
     const archive = await w.game.archive(bob);
-    expect(archive.days.map((d) => [d.day, d.status, d.charges])).toEqual([
-      [2, 'solved', 1],
-      [1, 'solved', 1],
+    expect(archive.days.map((d) => [d.day, ...d.levels.map((l) => l.status)])).toEqual([
+      [2, 'solved', 'new', 'new'],
+      [1, 'solved', 'new', 'new'],
     ]);
 
     // Two days later nobody has played: every run has lapsed.
     w.nextDay();
     w.nextDay();
-    expect((await w.game.init(ada, null)).streak.current).toBe(0);
-    top = await w.game.leaderboard(ada, 'streak', null);
+    expect((await w.game.init(ada, null, 'easy')).streak.current).toBe(0);
+    top = await w.game.leaderboard(ada, 'streak', null, 'easy');
     expect(top.rows).toEqual([]);
   });
 });
@@ -248,36 +292,36 @@ describe('sharing and joining', () => {
     const w = world();
     const ada = caller('ada');
     await w.game.ensureDailyPost();
-    const { board } = await w.game.init(ada, null);
-    await expect(w.game.share(ada, 1)).rejects.toMatchObject({ code: 'not-finished' });
-    await w.game.power(ada, 1, answers(board).win);
-    expect((await w.game.result(ada, 1)).canShare).toBe(true);
+    const { board } = await w.game.init(ada, null, 'easy');
+    await expect(w.game.share(ada, 1, 'easy')).rejects.toMatchObject({ code: 'not-finished' });
+    await w.game.power(ada, 1, 'easy', answers(board).win);
+    expect((await w.game.result(ada, 1, 'easy')).canShare).toBe(true);
 
-    await w.game.share(ada, 1);
-    await w.game.share(ada, 1);
+    await w.game.share(ada, 1, 'easy');
+    await w.game.share(ada, 1, 'easy');
     const replies = w.reddit.comments.filter((c) => c.as === 'user');
     expect(replies).toHaveLength(1);
-    expect(replies[0]?.text).toBe('Gatecrash #1 ⚡▫▫▫▫ 0:00');
+    expect(replies[0]?.text).toBe('Gatecrash #1 Easy ⚡▫▫▫▫ 0:00');
     expect(replies[0]?.parentId).toBe(w.reddit.comments[0]?.id);
-    expect((await w.game.result(ada, 1)).shared).toBe(true);
+    expect((await w.game.result(ada, 1, 'easy')).shared).toBe(true);
   });
 
   it('cannot share a board that has no post', async () => {
     const w = world();
     const ada = caller('ada');
-    const { board } = await w.game.init(ada, null);
-    await w.game.power(ada, 1, answers(board).win);
-    expect((await w.game.result(ada, 1)).canShare).toBe(false);
-    await expect(w.game.share(ada, 1)).rejects.toMatchObject({ code: 'no-post' });
+    const { board } = await w.game.init(ada, null, 'easy');
+    await w.game.power(ada, 1, 'easy', answers(board).win);
+    expect((await w.game.result(ada, 1, 'easy')).canShare).toBe(false);
+    await expect(w.game.share(ada, 1, 'easy')).rejects.toMatchObject({ code: 'no-post' });
   });
 
   it('subscribes only when asked and remembers it', async () => {
     const w = world();
     const ada = caller('ada');
-    expect((await w.game.result(ada, null)).joined).toBe(false);
+    expect((await w.game.result(ada, null, 'easy')).joined).toBe(false);
     await w.game.join(ada);
     expect(w.reddit.subscribed).toBe(1);
-    expect((await w.game.result(ada, null)).joined).toBe(true);
+    expect((await w.game.result(ada, null, 'easy')).joined).toBe(true);
   });
 });
 
@@ -286,22 +330,22 @@ describe('forgetting a player', () => {
     const w = world();
     const ada = caller('ada');
     const bob = caller('bob');
-    const { board } = await w.game.init(ada, null);
-    await w.game.power(ada, 1, answers(board).win);
-    await w.game.power(bob, 1, answers(board).win);
-    expect((await w.game.leaderboard(bob, 'day', 1)).rows).toHaveLength(2);
+    const { board } = await w.game.init(ada, null, 'easy');
+    await w.game.power(ada, 1, 'easy', answers(board).win);
+    await w.game.power(bob, 1, 'easy', answers(board).win);
+    expect((await w.game.leaderboard(bob, 'day', 1, 'easy')).rows).toHaveLength(2);
 
     await w.game.forget(ada);
-    const after = await w.game.init(ada, null);
+    const after = await w.game.init(ada, null, 'easy');
     expect(after.state.status).toBe('new');
     expect(after.streak).toEqual({ current: 0, best: 0, tier: null });
     expect(w.reddit.flairs.get('ada')).toBe('');
-    const day = await w.game.leaderboard(bob, 'day', 1);
+    const day = await w.game.leaderboard(bob, 'day', 1, 'easy');
     expect(day.rows.map((r) => r.name)).toEqual(['bob']);
-    const streaks = await w.game.leaderboard(bob, 'streak', null);
+    const streaks = await w.game.leaderboard(bob, 'streak', null, 'easy');
     expect(streaks.rows.map((r) => r.name)).toEqual(['bob']);
-    expect((await w.game.archive(ada)).days[0]?.status).toBe('new');
-    expect((await w.game.result(bob, 1)).histogram).toEqual([2, 0, 0, 0, 0, 0]);
+    expect((await w.game.archive(ada)).days[0]?.levels.map((l) => l.status)).toEqual(['new', 'new', 'new']);
+    expect((await w.game.result(bob, 1, 'easy')).histogram).toEqual([2, 0, 0, 0, 0, 0]);
   });
 });
 
@@ -309,11 +353,11 @@ describe('guests', () => {
   it('can load the board but not write', async () => {
     const w = world();
     const guest = caller(null);
-    const init = await w.game.init(guest, null);
+    const init = await w.game.init(guest, null, 'easy');
     expect(init.loggedIn).toBe(false);
     expect(init.board.sockets.length).toBeGreaterThan(0);
-    await expect(w.game.start(guest, 1)).rejects.toMatchObject({ status: 401 });
-    const result = await w.game.result(guest, 1);
+    await expect(w.game.start(guest, 1, 'easy')).rejects.toMatchObject({ status: 401 });
+    const result = await w.game.result(guest, 1, 'easy');
     expect(result.canShare).toBe(false);
     expect((await w.game.archive(guest)).days).toHaveLength(1);
   });
@@ -338,25 +382,28 @@ describe('http', () => {
     expect((await post('/internal/triggers/on-app-install', {})).status).toBe(200);
     expect(w.reddit.posts).toHaveLength(1);
 
-    const init = await (await app.request('/api/init')).json();
+    const init = await (await app.request('/api/init?level=easy')).json();
     expect(init.day).toBe(1);
     const splash = await (await app.request('/api/splash')).json();
-    expect(splash).toMatchObject({ day: 1, status: 'new', difficulty: 'easy', loggedIn: true });
+    expect(splash).toMatchObject({ day: 1, loggedIn: true });
+    expect(splash.levels.map((l: { level: string }) => l.level)).toEqual(['easy', 'medium', 'hard']);
 
-    expect((await post('/api/power', { placement: [] })).status).toBe(400);
-    const bad = await post('/api/power', { day: 1, placement: ['AND'] });
+    expect((await post('/api/power', { level: 'easy', placement: [] })).status).toBe(400);
+    const bad = await post('/api/power', { day: 1, level: 'easy', placement: ['AND'] });
     expect(bad.status).toBe(400);
     expect((await bad.json()).error).toBe('bad-placement');
     expect((await app.request('/api/init?day=99')).status).toBe(404);
 
-    const good = await post('/api/power', { day: 1, placement: answers(init.board).win });
+    const good = await post('/api/power', { day: 1, level: 'easy', placement: answers(init.board).win });
     expect((await good.json()).state.status).toBe('solved');
-    expect((await post('/api/share', { day: 1 })).status).toBe(200);
+    expect((await post('/api/power', { day: 1, placement: [] })).status).toBe(400);
+    expect((await post('/api/share', { day: 1, level: 'easy' })).status).toBe(200);
+    expect((await app.request('/api/result?day=1&level=easy')).status).toBe(200);
     expect((await app.request('/api/leaderboard?scope=streak')).status).toBe(200);
     expect((await app.request('/api/archive')).status).toBe(200);
     expect((await post('/api/tutorial-done', {})).status).toBe(200);
 
     who = caller(null);
-    expect((await post('/api/start', { day: 1 })).status).toBe(401);
+    expect((await post('/api/start', { day: 1, level: 'easy' })).status).toBe(401);
   });
 });

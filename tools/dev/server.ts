@@ -7,7 +7,7 @@
  *   /splash.html           the inline post          /game.html   the expanded game
  *   /dev/as/<name>         play as another user     /dev/as/guest  logged out
  *   /dev/advance?days=1    move the clock forward and run the daily scheduler
- *   /dev/seed?n=40         add fake finished players to today's board
+ *   /dev/seed?n=40&level=easy   add fake finished players to one of today's boards
  *   /dev/reddit            what the game asked Reddit to do
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -25,7 +25,7 @@ import { createFakeReddit, createFakeRedis } from '../../src/server/testing/fake
 import { MS_PER_DAY } from '../../src/shared/day';
 import { createRng } from '../../src/shared/rng';
 import { solve } from '../../src/shared/solve';
-import { MAX_CHARGES } from '../../src/shared/types';
+import { MAX_CHARGES, asLevel } from '../../src/shared/types';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const clientRoot = path.resolve(here, '../../src/client');
@@ -56,7 +56,8 @@ export const startDevServer = async (port = 5173): Promise<DevServer> => {
   dev.get('/dev/seed', async (c) => {
     const n = Number(c.req.query('n') ?? '30');
     const rng = createRng(n * 7919 + reddit.posts.length);
-    const init = await game.init(guest, null);
+    const level = asLevel(c.req.query('level')) ?? 'easy';
+    const init = await game.init(guest, null, level);
     const { solutions } = solve(init.board);
     const win = solutions[0];
     if (!win) return c.json({ error: 'no solution' }, 500);
@@ -78,14 +79,14 @@ export const startDevServer = async (port = 5173): Promise<DevServer> => {
       const name = `bench_${rng.int(9000) + 1000}_${p}`;
       const caller: Caller = { ...guest, userId: `t2_${name}`, username: name };
       const misses = Math.min(MAX_CHARGES, Math.floor(rng.next() * rng.next() * 6.5));
-      await game.start(caller, init.day);
+      await game.start(caller, init.day, level);
       const started = clock.offset;
-      for (let m = 0; m < misses; m++) await game.power(caller, init.day, lose);
+      for (let m = 0; m < misses; m++) await game.power(caller, init.day, level, lose);
       clock.offset += (20 + rng.int(240)) * 1000;
-      if (misses < MAX_CHARGES) await game.power(caller, init.day, win);
+      if (misses < MAX_CHARGES) await game.power(caller, init.day, level, win);
       clock.offset = started;
     }
-    return c.json(await game.result(guest, init.day));
+    return c.json(await game.result(guest, init.day, level));
   });
   dev.get('/dev/reddit', (c) =>
     c.json({

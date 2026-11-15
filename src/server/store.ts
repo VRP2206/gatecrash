@@ -7,6 +7,7 @@ import {
   type DayState,
   type FullPlacement,
   type GameStatus,
+  type Level,
   type SolvedBoard,
 } from '../shared/types';
 import type { RedisLike } from './ports';
@@ -15,15 +16,17 @@ import type { RedisLike } from './ports';
  * Every Redis read and write in Gatecrash lives in this file.
  *
  *   meta                      hash: epoch (UTC day index of day 1), salt, latestDay
- *   board:{day}               JSON SolvedBoard, written once and never changed
+ * A day has three boards (easy, medium, hard). `{id}` below is `{day}:{level}`.
+ *
+ *   board:{id}                JSON SolvedBoard, written once and never changed
  *   post:{day}                hash: postId, threadId (the pinned results comment), claim
  *   day:{postId}              day number for a post
- *   u:{uid}:d:{day}           hash: status, attempts, startedAt, endedAt, live, shared
- *   u:{uid}:days              hash: day -> "<status>:<charges>" (one read for the archive)
+ *   u:{uid}:d:{id}            hash: status, attempts, startedAt, endedAt, live, shared
+ *   u:{uid}:days              hash: id -> "<status>:<charges>" (one read for the archive)
  *   u:{uid}:streak            hash: current, best, lastSolvedDay
  *   u:{uid}:flags             hash: tutorial, joined
- *   stats:{day}               hash: c1..c5, fused, players
- *   lb:{day}                  zset: score = charges*100000 + seconds, member = uid
+ *   stats:{id}                hash: c1..c5, fused, players
+ *   lb:{id}                   zset: score = charges*100000 + seconds, member = uid
  *   lb:streak                 zset: score = current streak, member = uid
  *   streak:last               hash: uid -> last solved day (to drop lapsed runs from lb:streak)
  *   names                     hash: uid -> username
@@ -68,7 +71,9 @@ export type DaySummary = { status: GameStatus; charges: number };
 export type PostLink = { postId: string; threadId: string | null };
 
 export const createStore = (redis: RedisLike) => {
-  const dayKey = (uid: string, day: number): string => `u:${uid}:d:${day}`;
+  const id = (day: number, level: Level): string => `${day}:${level}`;
+  const dayKey = (uid: string, day: number, level: Level): string =>
+    `u:${uid}:d:${id(day, level)}`;
 
   return {
     // --- installation ---------------------------------------------------
@@ -93,8 +98,8 @@ export const createStore = (redis: RedisLike) => {
     },
 
     // --- boards and posts -----------------------------------------------
-    async getBoard(day: number): Promise<SolvedBoard | null> {
-      const raw = await redis.get(`board:${day}`);
+    async getBoard(day: number, level: Level): Promise<SolvedBoard | null> {
+      const raw = await redis.get(`board:${id(day, level)}`);
       if (!raw) return null;
       // Boards are only ever written by saveBoard below.
       const board: SolvedBoard = JSON.parse(raw);
@@ -102,8 +107,9 @@ export const createStore = (redis: RedisLike) => {
     },
     /** Store a board unless one exists already; returns the board in force. */
     async saveBoard(board: SolvedBoard): Promise<SolvedBoard> {
-      await redis.set(`board:${board.day}`, JSON.stringify(board), { nx: true });
-      const raw = await redis.get(`board:${board.day}`);
+      const key = `board:${id(board.day, board.level)}`;
+      await redis.set(key, JSON.stringify(board), { nx: true });
+      const raw = await redis.get(key);
       if (!raw) return board;
       const stored: SolvedBoard = JSON.parse(raw);
       return stored;
@@ -139,8 +145,12 @@ export const createStore = (redis: RedisLike) => {
     },
 
     // --- one player, one day --------------------------------------------
-    async getDayState(uid: string, day: number): Promise<DayState & { shared: boolean }> {
-      const hash = await redis.hGetAll(dayKey(uid, day));
+    async getDayState(
+      uid: string,
+      day: number,
+      level: Level
+    ): Promise<DayState & { shared: boolean }> {
+      const hash = await redis.hGetAll(dayKey(uid, day, level));
       if (!hash.status) return { ...NEW_DAY_STATE, shared: false };
       return {
         status: asStatus(hash.status),
@@ -151,8 +161,8 @@ export const createStore = (redis: RedisLike) => {
         shared: hash.shared === '1',
       };
     },
-    async saveDayState(uid: string, day: number, state: DayState): Promise<void> {
-      await redis.hSet(dayKey(uid, day), {
+    async saveDayState(uid: string, day: number, level: Level, state: DayState): Promise<void> {
+      await redis.hSet(dayKey(uid, day, level), {
         status: state.status,
         attempts: JSON.stringify(state.attempts),
         startedAt: state.startedAt === null ? '' : String(state.startedAt),
@@ -160,18 +170,19 @@ export const createStore = (redis: RedisLike) => {
         live: state.live ? '1' : '0',
       });
       await redis.hSet(`u:${uid}:days`, {
-        [String(day)]: `${state.status}:${state.attempts.length}`,
+        [id(day, level)]: `${state.status}:${state.attempts.length}`,
       });
     },
-    async markShared(uid: string, day: number): Promise<void> {
-      await redis.hSet(dayKey(uid, day), { shared: '1' });
+    async markShared(uid: string, day: number, level: Level): Promise<void> {
+      await redis.hSet(dayKey(uid, day, level), { shared: '1' });
     },
-    async getSummaries(uid: string): Promise<Map<number, DaySummary>> {
+    /** Every board the player has touched, keyed `day:level`. */
+    async getSummaries(uid: string): Promise<Map<string, DaySummary>> {
       const hash = await redis.hGetAll(`u:${uid}:days`);
-      const out = new Map<number, DaySummary>();
-      for (const [day, value] of Object.entries(hash)) {
+      const out = new Map<string, DaySummary>();
+      for (const [key, value] of Object.entries(hash)) {
         const [status, charges] = value.split(':');
-        out.set(num(day), { status: asStatus(status), charges: num(charges) });
+        out.set(key, { status: asStatus(status), charges: num(charges) });
       }
       return out;
     },
@@ -224,32 +235,32 @@ export const createStore = (redis: RedisLike) => {
     },
 
     // --- per-day stats ------------------------------------------------------
-    async addPlayer(day: number): Promise<void> {
-      await redis.hIncrBy(`stats:${day}`, 'players', 1);
+    async addPlayer(day: number, level: Level): Promise<void> {
+      await redis.hIncrBy(`stats:${id(day, level)}`, 'players', 1);
     },
     /** `bucket` 0-4 = solved in 1-5 charges, 5 = blew the fuse. */
-    async addResult(day: number, bucket: number): Promise<void> {
-      await redis.hIncrBy(`stats:${day}`, bucket >= 5 ? 'fused' : `c${bucket + 1}`, 1);
+    async addResult(day: number, level: Level, bucket: number): Promise<void> {
+      await redis.hIncrBy(`stats:${id(day, level)}`, bucket >= 5 ? 'fused' : `c${bucket + 1}`, 1);
     },
-    async getStats(day: number): Promise<{ histogram: Histogram; players: number }> {
-      const hash = await redis.hGetAll(`stats:${day}`);
+    async getStats(day: number, level: Level): Promise<{ histogram: Histogram; players: number }> {
+      const hash = await redis.hGetAll(`stats:${id(day, level)}`);
       const histogram = emptyHistogram();
       for (let i = 0; i < 5; i++) histogram[i] = num(hash[`c${i + 1}`]);
       histogram[5] = num(hash.fused);
       return { histogram, players: num(hash.players) };
     },
-    async addDayScore(day: number, uid: string, score: number): Promise<void> {
-      await redis.zAdd(`lb:${day}`, { member: uid, score });
+    async addDayScore(day: number, level: Level, uid: string, score: number): Promise<void> {
+      await redis.zAdd(`lb:${id(day, level)}`, { member: uid, score });
     },
-    async getDayRank(day: number, uid: string): Promise<{ rank: number | null; total: number }> {
+    async getDayRank(day: number, level: Level, uid: string): Promise<{ rank: number | null; total: number }> {
       const [rank, total] = await Promise.all([
-        redis.zRank(`lb:${day}`, uid),
-        redis.zCard(`lb:${day}`),
+        redis.zRank(`lb:${id(day, level)}`, uid),
+        redis.zCard(`lb:${id(day, level)}`),
       ]);
       return { rank: rank === undefined ? null : rank + 1, total };
     },
-    async topDayScores(day: number, limit: number): Promise<{ uid: string; score: number }[]> {
-      const rows = await redis.zRange(`lb:${day}`, 0, limit - 1, { by: 'rank' });
+    async topDayScores(day: number, level: Level, limit: number): Promise<{ uid: string; score: number }[]> {
+      const rows = await redis.zRange(`lb:${id(day, level)}`, 0, limit - 1, { by: 'rank' });
       return rows.map((r) => ({ uid: r.member, score: r.score }));
     },
 
@@ -273,10 +284,10 @@ export const createStore = (redis: RedisLike) => {
      * places, name. Anonymous totals in stats:{day} stay, since they identify nobody.
      */
     async forgetUser(uid: string): Promise<void> {
-      const days = Object.keys(await redis.hGetAll(`u:${uid}:days`));
-      for (const day of days) {
-        await redis.del(dayKey(uid, num(day)));
-        await redis.zRem(`lb:${day}`, [uid]);
+      const ids = Object.keys(await redis.hGetAll(`u:${uid}:days`));
+      for (const boardId of ids) {
+        await redis.del(`u:${uid}:d:${boardId}`);
+        await redis.zRem(`lb:${boardId}`, [uid]);
       }
       await redis.del(`u:${uid}:days`, `u:${uid}:streak`, `u:${uid}:flags`);
       await redis.zRem('lb:streak', [uid]);

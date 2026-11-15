@@ -1,3 +1,4 @@
+import type { PointerEvent } from 'react';
 import { CHIP_INFO, type ChipType } from '../../shared/types';
 import { ChipGlyph } from './ChipArt';
 
@@ -7,10 +8,11 @@ type Props = {
   locked: boolean;
   beat: number;
   onPick: (chip: ChipType) => void;
+  onGrab: (event: PointerEvent, chip: ChipType) => void;
 };
 
-/** Today's chips. Tap one, then tap a socket. */
-export const Tray = ({ tray, hand, locked, beat, onPick }: Props) => (
+/** Today's chips. Tap one then a socket, or drag it straight onto the board. */
+export const Tray = ({ tray, hand, locked, beat, onPick, onGrab }: Props) => (
   <section className={`tray ${tray.length > 4 ? 'is-crowded' : ''}`} aria-label="Chip tray">
     {tray.map(({ chip, left }) => (
       <button
@@ -21,6 +23,7 @@ export const Tray = ({ tray, hand, locked, beat, onPick }: Props) => (
         aria-pressed={hand === chip}
         aria-label={`${CHIP_INFO[chip].label}: ${CHIP_INFO[chip].blurb} ${left} left.`}
         onClick={() => onPick(chip)}
+        onPointerDown={(event) => onGrab(event, chip)}
       >
         <ChipGlyph chip={chip} beat={beat} bare />
         <span className="tray-name" aria-hidden="true">

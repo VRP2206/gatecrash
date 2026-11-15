@@ -8,7 +8,7 @@ const name = (s: Source): string =>
 export const renderBoard = (board: SolvedBoard, solutions: number, candidates: number): string => {
   const lines: string[] = [];
   lines.push(
-    `Gatecrash #${board.day}  ${board.date}  ${board.difficulty}  ` +
+    `Gatecrash #${board.day} ${board.level}  ${board.date}  ${board.difficulty}  ` +
       `(${board.inputs} switches, ${board.sockets.length} sockets, ${board.bulbs.length} bulbs)`
   );
   const layers = Math.max(...board.sockets.map((s) => s.layer));

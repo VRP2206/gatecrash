@@ -49,6 +49,7 @@ describe('rows', () => {
 const board: Board = {
   day: 1,
   date: '2026-11-16',
+  level: 'easy',
   difficulty: 'easy',
   inputs: 2,
   sockets: [

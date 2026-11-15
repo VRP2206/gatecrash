@@ -3,6 +3,7 @@ import { generate } from '../src/shared/generate';
 import { solve } from '../src/shared/solve';
 import { utcDayIndex, weekdayName } from '../src/shared/day';
 import { isSolved } from '../src/shared/sim';
+import { LEVELS } from '../src/shared/types';
 
 const at = process.argv.indexOf('--days');
 const days = Number((at !== -1 && process.argv[at + 1]) || '60');
@@ -11,7 +12,8 @@ const epoch = utcDayIndex(Date.parse('2026-11-16T00:00:00Z'));
 console.log('day  weekday    level      sw sock bulb tray  legal wins live-row-pass');
 const started = Date.now();
 for (let day = 1; day <= days; day++) {
-  const board = generate({ day, dayIndex: epoch + day - 1 });
+  for (const level of LEVELS) {
+  const board = generate({ day, dayIndex: epoch + day - 1, level });
   const { solutions, candidates } = solve(board);
   if (!isSolved(board, board.solution)) throw new Error(`day ${day}: bad reference`);
   console.log(
@@ -27,5 +29,6 @@ for (let day = 1; day <= days; day++) {
       String(solutions.length).padStart(4),
     ].join(' ')
   );
+  }
 }
-console.log(`\n${days} boards in ${Date.now() - started} ms`);
+console.log(`\n${days * 3} boards in ${Date.now() - started} ms`);

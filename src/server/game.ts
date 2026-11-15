@@ -2,6 +2,7 @@ import type {
   ArchiveResponse,
   InitResponse,
   JoinResponse,
+  LevelSummary,
   LeaderboardResponse,
   PowerResponse,
   ResultResponse,
@@ -29,10 +30,12 @@ import {
 import { simulate, validatePlacement } from '../shared/sim';
 import { advanceStreak, flairText, tierFor, visibleStreak, type Streak } from '../shared/streak';
 import {
+  LEVELS,
   MAX_CHARGES,
   NEW_DAY_STATE,
   type Board,
   type DayState,
+  type Level,
   type SolvedBoard,
 } from '../shared/types';
 import type { Caller, Ports } from './ports';
@@ -59,6 +62,7 @@ const isFinal = (state: DayState): boolean =>
 const publicBoard = (board: SolvedBoard): Board => ({
   day: board.day,
   date: board.date,
+  level: board.level,
   difficulty: board.difficulty,
   inputs: board.inputs,
   sockets: board.sockets,
@@ -78,7 +82,7 @@ const publicState = (state: DayState): DayState => ({
 
 export const postTitle = (day: number, dayIndex: number): string =>
   `Gatecrash #${day} — ${weekdayName(dayIndex)}${
-    difficultyFor(dayIndex) === 'overclock' ? ' Overclock' : ''
+    difficultyFor(dayIndex, 'hard') === 'overclock' ? ' Overclock' : ''
   }`;
 
 export const THREAD_TEXT =
@@ -94,11 +98,29 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
     return { epoch, todayIndex, today: Math.max(1, dayNumber(todayIndex, epoch)) };
   };
 
-  const boardFor = async (day: number, epoch: number): Promise<SolvedBoard> => {
-    const existing = await store.getBoard(day);
+  const boardFor = async (day: number, level: Level, epoch: number): Promise<SolvedBoard> => {
+    const existing = await store.getBoard(day, level);
     if (existing) return existing;
     const salt = await store.ensureSalt(Math.random().toString(36).slice(2, 12));
-    return store.saveBoard(generate({ day, dayIndex: dayIndexOf(day, epoch), salt }));
+    return store.saveBoard(generate({ day, dayIndex: dayIndexOf(day, epoch), level, salt }));
+  };
+
+  /** The caller's standing on each of a day's three boards. */
+  const levelsFor = async (
+    uid: string | null,
+    day: number,
+    dayIndex: number
+  ): Promise<LevelSummary[]> => {
+    const mine = uid ? await store.getSummaries(uid) : new Map();
+    return LEVELS.map((level) => {
+      const summary = mine.get(`${day}:${level}`);
+      return {
+        level,
+        difficulty: difficultyFor(dayIndex, level),
+        status: summary?.status ?? 'new',
+        charges: summary?.charges ?? 0,
+      };
+    });
   };
 
   /** Which board a request is about: an explicit day, else the post's day, else today. */
@@ -129,9 +151,14 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
     return { current, best: streak.best, tier: tierFor(current)?.name ?? null };
   };
 
-  const begin = async (caller: Caller, day: number, today: number): Promise<DayState> => {
+  const begin = async (
+    caller: Caller,
+    day: number,
+    level: Level,
+    today: number
+  ): Promise<DayState> => {
     const uid = requireUser(caller);
-    const state = await store.getDayState(uid, day);
+    const state = await store.getDayState(uid, day, level);
     if (state.status !== 'new') return publicState(state);
     if (caller.username) await store.rememberName(uid, caller.username);
     const started: DayState = {
@@ -140,20 +167,20 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       startedAt: now(),
       live: day === today,
     };
-    await store.saveDayState(uid, day, started);
-    await store.addPlayer(day);
+    await store.saveDayState(uid, day, level, started);
+    await store.addPlayer(day, level);
     return started;
   };
 
   /** Book-keeping when a board ends: histogram, streak, leaderboard, flair. */
-  const finish = async (caller: Caller, uid: string, day: number, state: DayState) => {
+  const finish = async (caller: Caller, uid: string, day: number, level: Level, state: DayState) => {
     const solved = state.status === 'solved';
-    await store.addResult(day, solved ? state.attempts.length - 1 : 5);
-    if (!state.live) return;
-    const streak = advanceStreak(await store.getStreak(uid), day, solved);
+    await store.addResult(day, level, solved ? state.attempts.length - 1 : 5);
+    // Only a live solve touches the streak; any one of the day's boards is enough.
+    if (!state.live || !solved) return;
+    const streak = advanceStreak(await store.getStreak(uid), day);
     await store.saveStreak(uid, streak);
-    if (!solved) return;
-    await store.addDayScore(day, uid, rankScore(state.attempts.length, secondsTaken(state)));
+    await store.addDayScore(day, level, uid, rankScore(state.attempts.length, secondsTaken(state)));
     if (caller.username) {
       try {
         await reddit.setUserFlair(caller.username, flairText(streak.current));
@@ -167,14 +194,25 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
   return {
     store,
 
-    async init(caller: Caller, requested: number | null): Promise<InitResponse> {
+    async init(
+      caller: Caller,
+      requested: number | null,
+      wanted: Level | null
+    ): Promise<InitResponse> {
       const { epoch, today } = await calendar();
       const day = await resolveDay(caller, requested, today);
-      const board = await boardFor(day, epoch);
+      const dayIndex = dayIndexOf(day, epoch);
       const uid = caller.userId;
+      const levels = await levelsFor(uid, day, dayIndex);
+      // No level asked for: the first one still open, else the first.
+      const level =
+        wanted ??
+        levels.find((l) => l.status === 'new' || l.status === 'playing')?.level ??
+        'easy';
+      const board = await boardFor(day, level, epoch);
       const [state, streak, flags] = uid
         ? await Promise.all([
-            store.getDayState(uid, day),
+            store.getDayState(uid, day, level),
             store.getStreak(uid),
             store.getFlags(uid),
           ])
@@ -182,8 +220,10 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       if (uid && caller.username) await store.rememberName(uid, caller.username);
       return {
         day,
+        level,
+        levels,
         today,
-        dayIndex: dayIndexOf(day, epoch),
+        dayIndex,
         board: publicBoard(board),
         state: publicState(state),
         streak: streak ? streakView(streak, today) : { current: 0, best: 0, tier: null },
@@ -202,34 +242,37 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       const day = await resolveDay(caller, null, today);
       const dayIndex = dayIndexOf(day, epoch);
       const uid = caller.userId;
-      const [state, streak] = uid
-        ? await Promise.all([store.getDayState(uid, day), store.getStreak(uid)])
-        : [NEW_DAY_STATE, null];
+      const [levels, streak] = await Promise.all([
+        levelsFor(uid, day, dayIndex),
+        uid ? store.getStreak(uid) : null,
+      ]);
       return {
         day,
         dayIndex,
-        difficulty: difficultyFor(dayIndex),
-        status: state.status,
-        charges: state.attempts.length,
-        seconds: secondsTaken(state),
+        levels,
         streak: streak ? visibleStreak(streak, today) : 0,
         loggedIn: uid !== null,
       };
     },
 
-    async start(caller: Caller, requested: number): Promise<StartResponse> {
+    async start(caller: Caller, requested: number, level: Level): Promise<StartResponse> {
       requireUser(caller);
       const { today } = await calendar();
       const day = await resolveDay(caller, requested, today);
-      return { state: await begin(caller, day, today) };
+      return { state: await begin(caller, day, level, today) };
     },
 
-    async power(caller: Caller, requested: number, placement: unknown): Promise<PowerResponse> {
+    async power(
+      caller: Caller,
+      requested: number,
+      level: Level,
+      placement: unknown
+    ): Promise<PowerResponse> {
       const uid = requireUser(caller);
       const { epoch, today } = await calendar();
       const day = await resolveDay(caller, requested, today);
-      const board = await boardFor(day, epoch);
-      const before = await begin(caller, day, today);
+      const board = await boardFor(day, level, epoch);
+      const before = await begin(caller, day, level, today);
       if (isFinal(before)) {
         throw new GameError(409, 'finished', 'This board is already finished.');
       }
@@ -246,27 +289,32 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
         status: solved ? 'solved' : out ? 'fused' : 'playing',
         endedAt: solved || out ? now() : null,
       };
-      await store.saveDayState(uid, day, state);
-      if (isFinal(state)) await finish(caller, uid, day, state);
+      await store.saveDayState(uid, day, level, state);
+      if (isFinal(state)) await finish(caller, uid, day, level, state);
       return { rows, chargesLeft: MAX_CHARGES - attempts.length, state };
     },
 
-    async result(caller: Caller, requested: number | null): Promise<ResultResponse> {
+    async result(
+      caller: Caller,
+      requested: number | null,
+      level: Level
+    ): Promise<ResultResponse> {
       const { today } = await calendar();
       const day = await resolveDay(caller, requested, today);
       const uid = caller.userId;
       const [state, stats, streak, flags, post, place] = await Promise.all([
-        uid ? store.getDayState(uid, day) : { ...NEW_DAY_STATE, shared: false },
-        store.getStats(day),
+        uid ? store.getDayState(uid, day, level) : { ...NEW_DAY_STATE, shared: false },
+        store.getStats(day, level),
         uid ? store.getStreak(uid) : null,
         uid ? store.getFlags(uid) : { tutorial: false, joined: false },
         store.getPost(day),
-        uid ? store.getDayRank(day, uid) : { rank: null, total: 0 },
+        uid ? store.getDayRank(day, level, uid) : { rank: null, total: 0 },
       ]);
       const view = streak ? streakView(streak, today) : { current: 0, best: 0, tier: null };
       const bucket = state.status === 'solved' ? state.attempts.length - 1 : 5;
       return {
         day,
+        level,
         state: publicState(state),
         histogram: stats.histogram,
         players: stats.players,
@@ -274,7 +322,7 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
         ranked: place.total,
         beat: isFinal(state) ? beatPercent(stats.histogram, bucket) : 0,
         streak: view,
-        shareLine: shareLine(day, state, state.live ? view.current : 0),
+        shareLine: shareLine(day, level, state, state.live ? view.current : 0),
         shared: state.shared,
         canShare: uid !== null && isFinal(state) && post !== null,
         joined: flags.joined,
@@ -282,11 +330,11 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
     },
 
     /** Post the player's result line under the pinned results comment. Explicit tap only. */
-    async share(caller: Caller, requested: number): Promise<ShareResponse> {
+    async share(caller: Caller, requested: number, level: Level): Promise<ShareResponse> {
       const uid = requireUser(caller);
       const { today } = await calendar();
       const day = await resolveDay(caller, requested, today);
-      const state = await store.getDayState(uid, day);
+      const state = await store.getDayState(uid, day, level);
       if (!isFinal(state)) {
         throw new GameError(409, 'not-finished', 'Finish the board before sharing.');
       }
@@ -299,8 +347,8 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
         await store.setThread(day, threadId);
       }
       const streak = state.live ? visibleStreak(await store.getStreak(uid), today) : 0;
-      const { url } = await reddit.replyAsUser(threadId, shareLine(day, state, streak));
-      await store.markShared(uid, day);
+      const { url } = await reddit.replyAsUser(threadId, shareLine(day, level, state, streak));
+      await store.markShared(uid, day, level);
       return { shared: true, url: url ?? reddit.postUrl(post.postId) };
     },
 
@@ -336,13 +384,18 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       const days: ArchiveResponse['days'] = [];
       for (let day = today; day >= Math.max(1, today - ARCHIVE_DAYS + 1); day--) {
         const dayIndex = dayIndexOf(day, epoch);
-        const summary = mine.get(day);
         days.push({
           day,
           dayIndex,
-          difficulty: difficultyFor(dayIndex),
-          status: summary?.status ?? 'new',
-          charges: summary?.charges ?? 0,
+          levels: LEVELS.map((level) => {
+            const summary = mine.get(`${day}:${level}`);
+            return {
+              level,
+              difficulty: difficultyFor(dayIndex, level),
+              status: summary?.status ?? 'new',
+              charges: summary?.charges ?? 0,
+            };
+          }),
         });
       }
       return { today, days };
@@ -351,7 +404,8 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
     async leaderboard(
       caller: Caller,
       scope: 'day' | 'streak',
-      requested: number | null
+      requested: number | null,
+      level: Level
     ): Promise<LeaderboardResponse> {
       const { today } = await calendar();
       const uid = caller.userId;
@@ -373,13 +427,14 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
       }
       const day = await resolveDay(caller, requested, today);
       const [top, place] = await Promise.all([
-        store.topDayScores(day, LEADERBOARD_ROWS),
-        uid ? store.getDayRank(day, uid) : store.getDayRank(day, ''),
+        store.topDayScores(day, level, LEADERBOARD_ROWS),
+        store.getDayRank(day, level, uid ?? ''),
       ]);
       const names = await store.getNames(top.map((r) => r.uid));
       return {
         scope,
         day,
+        level,
         rank: place.rank,
         total: place.total,
         rows: top.map((row, i) => ({
@@ -396,7 +451,7 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
      */
     async ensureDailyPost(): Promise<{ day: number; postId: string | null; created: boolean }> {
       const { epoch, today, todayIndex } = await calendar();
-      await boardFor(today, epoch);
+      await Promise.all(LEVELS.map((level) => boardFor(today, level, epoch)));
       const existing = await store.getPost(today);
       if (existing) return { day: today, postId: existing.postId, created: false };
       if (!(await store.claimPostCreation(today, now(), CLAIM_STALE_MS))) {
@@ -407,7 +462,7 @@ export const createGame = ({ redis, reddit, now }: Ports) => {
         day: today,
         dayIndex: todayIndex,
         fallback:
-          `Gatecrash #${today} is a daily circuit puzzle: drop the right chips into the board so the bulbs match the test card. ` +
+          `Gatecrash #${today} is a daily circuit puzzle with three boards, easy to hard: drop the right chips into the board so the bulbs match the test card. ` +
           'Open this post in the Reddit app or on new Reddit to play.',
       });
       await store.linkPost(today, postId);

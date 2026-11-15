@@ -1,5 +1,12 @@
-import type { Difficulty } from './types';
-import type { Board, DayState, FullPlacement, GameStatus, RowResult } from './types';
+import type {
+  Board,
+  DayState,
+  Difficulty,
+  FullPlacement,
+  GameStatus,
+  Level,
+  RowResult,
+} from './types';
 import type { Histogram } from './score';
 
 export type StreakView = {
@@ -10,9 +17,20 @@ export type StreakView = {
   tier: string | null;
 };
 
+/** Where one player stands on one of a day's three boards. */
+export type LevelSummary = {
+  level: Level;
+  difficulty: Difficulty;
+  status: GameStatus;
+  charges: number;
+};
+
 export type InitResponse = {
   /** The board being played. */
   day: number;
+  level: Level;
+  /** All three boards of this day, easy first. */
+  levels: LevelSummary[];
   /** The newest board. `day < today` means an archive board. */
   today: number;
   /** UTC day index of `day`, for showing its date. */
@@ -33,18 +51,15 @@ export type InitResponse = {
 export type SplashResponse = {
   day: number;
   dayIndex: number;
-  difficulty: Difficulty;
-  status: GameStatus;
-  charges: number;
-  seconds: number;
+  levels: LevelSummary[];
   streak: number;
   loggedIn: boolean;
 };
 
-export type StartRequest = { day: number };
+export type StartRequest = { day: number; level: Level };
 export type StartResponse = { state: DayState };
 
-export type PowerRequest = { day: number; placement: FullPlacement };
+export type PowerRequest = { day: number; level: Level; placement: FullPlacement };
 export type PowerResponse = {
   rows: RowResult[];
   chargesLeft: number;
@@ -53,6 +68,7 @@ export type PowerResponse = {
 
 export type ResultResponse = {
   day: number;
+  level: Level;
   state: DayState;
   histogram: Histogram;
   /** How many people have opened this board. */
@@ -70,16 +86,14 @@ export type ResultResponse = {
   joined: boolean;
 };
 
-export type ShareRequest = { day: number };
+export type ShareRequest = { day: number; level: Level };
 export type ShareResponse = { shared: true; url: string | null };
 export type JoinResponse = { joined: true };
 
 export type ArchiveDay = {
   day: number;
   dayIndex: number;
-  difficulty: Difficulty;
-  status: GameStatus;
-  charges: number;
+  levels: LevelSummary[];
 };
 export type ArchiveResponse = { today: number; days: ArchiveDay[] };
 
@@ -91,7 +105,7 @@ export type DayLeader = {
 };
 export type StreakLeader = { name: string; streak: number; you: boolean };
 export type LeaderboardResponse =
-  | { scope: 'day'; day: number; rows: DayLeader[]; rank: number | null; total: number }
+  | { scope: 'day'; day: number; level: Level; rows: DayLeader[]; rank: number | null; total: number }
   | { scope: 'streak'; rows: StreakLeader[]; total: number };
 
 export type ErrorResponse = { error: string; message: string };

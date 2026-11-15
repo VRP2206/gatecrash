@@ -1,4 +1,4 @@
-import type { ChipType, Difficulty } from './types';
+import type { ChipType, Difficulty, Level } from './types';
 
 export const MS_PER_DAY = 86_400_000;
 
@@ -126,24 +126,9 @@ const SPECS: Readonly<Record<Difficulty, DaySpec>> = {
   },
 };
 
-const WEEK: readonly Difficulty[] = [
-  'overclock', // Sunday
-  'easy',
-  'easy',
-  'medium',
-  'medium',
-  'hard',
-  'hard',
-];
-
-export const difficultyFor = (dayIndex: number): Difficulty =>
-  WEEK[weekdayOf(dayIndex)] ?? 'easy';
+/** Easy and medium use the same recipe every day; hard grows into Overclock on Sundays. */
+export const difficultyFor = (dayIndex: number, level: Level): Difficulty =>
+  level === 'hard' && weekdayOf(dayIndex) === 0 ? 'overclock' : level;
 
 export const specFor = (difficulty: Difficulty): DaySpec => SPECS[difficulty];
 
-export const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = {
-  easy: 'Warm-up',
-  medium: 'Standard',
-  hard: 'Tricky',
-  overclock: 'Overclock',
-};

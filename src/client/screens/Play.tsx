@@ -7,7 +7,9 @@ import { Charges } from '../board/Charges';
 import { TargetCard } from '../board/TargetCard';
 import { Tray } from '../board/Tray';
 import { Bolt } from '../board/icons';
+import { ChipGlyph } from '../board/ChipArt';
 import { useBeat } from '../hooks/useBeat';
+import { useChipDrag } from '../hooks/useChipDrag';
 import { useGame, type Game } from '../hooks/useGame';
 import type { Journey } from '../hooks/useJourney';
 import type { Session } from '../session';
@@ -67,7 +69,7 @@ const statusLine = (game: Game, coach: boolean): string => {
       : 'The live row fails. Swap chips, or power to see every row.';
   }
   const empty = board.sockets.length - game.placement.filter(Boolean).length;
-  if (empty === board.sockets.length) return 'Tap a chip, then tap a socket.';
+  if (empty === board.sockets.length) return 'Drag a chip onto a socket, or tap one then the other.';
   return `${empty} ${empty === 1 ? 'socket' : 'sockets'} to fill.`;
 };
 
@@ -95,7 +97,7 @@ const coachHint = (game: Game): { zone: Zone; text: string } | null => {
   if (placed === 0) {
     return {
       zone: 'tray',
-      text: 'Each chip shows what it does: wires in on the left, result on the right. Tap one.',
+      text: 'Each chip shows what it does: wires in on the left, result on the right. Tap one, or drag it to a socket.',
     };
   }
   return { zone: 'tray', text: 'One more. Tap the other chip.' };
@@ -118,6 +120,11 @@ export const Play = ({
   // The report is offered once the last test has finished replaying.
   const done = game.final && !game.running && !game.pending ? game.state : null;
   const beat = useBeat();
+  const { drag, grab, tap } = useChipDrag({
+    locked: game.locked,
+    onDrop: game.drop,
+    onReturn: game.lift,
+  });
   const ticking = !coach && game.state.status === 'playing';
   const clock = useClock(ticking, elapsedAtOpen);
   const seconds = game.final ? secondsTaken(game.state) : clock;
@@ -142,7 +149,7 @@ export const Play = ({
             </span>
           )}
           {onMenu && (
-            <button type="button" className="icon-btn" onClick={onMenu} aria-label="Past boards">
+            <button type="button" className="icon-btn" onClick={onMenu} aria-label="All of today's boards">
               <svg viewBox="0 0 16 16" aria-hidden="true" className="glyph glyph-line">
                 <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />
               </svg>
@@ -167,13 +174,16 @@ export const Play = ({
           placement={game.placement}
           signals={game.signals}
           row={game.row}
-          hand={game.hand}
+          hand={drag ? drag.chip : game.hand}
           armed={game.armed}
           nudge={game.nudge}
           locked={game.locked}
           running={game.running}
           showVerdict={game.complete || game.showAnswer}
-          onSocket={game.tapSocket}
+          onSocket={tap(game.tapSocket)}
+          dropTarget={drag?.over ?? null}
+          lifted={drag?.from ?? null}
+          onGrab={(event, chip, socket) => grab(event, chip, socket)}
         />
       </div>
 
@@ -204,7 +214,14 @@ export const Play = ({
       )}
 
       <div className={`zone zone-tray ${hint?.zone === 'tray' ? 'is-hinted' : ''}`}>
-        <Tray tray={game.tray} hand={game.hand} locked={game.locked} beat={beat} onPick={game.pick} />
+        <Tray
+          tray={game.tray}
+          hand={drag && drag.from === null ? drag.chip : game.hand}
+          locked={game.locked}
+          beat={beat}
+          onPick={tap(game.pick)}
+          onGrab={(event, chip) => grab(event, chip, null)}
+        />
       </div>
 
       <footer className={`zone zone-power ${hint?.zone === 'power' ? 'is-hinted' : ''}`}>
@@ -244,6 +261,12 @@ export const Play = ({
           </button>
         )}
       </footer>
+
+      {drag && (
+        <div className="drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
+          <ChipGlyph chip={drag.chip} beat={beat} bare />
+        </div>
+      )}
     </main>
   );
 };

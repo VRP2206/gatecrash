@@ -124,3 +124,31 @@
     opacity: 0.35;
   }
 }
+
+.splash-levels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+.splash-level {
+  padding: 2px var(--s2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--silk);
+  background: var(--pcb-800);
+  border: var(--line) solid var(--pcb-line);
+  border-radius: var(--r1);
+}
+.splash-level.is-solved {
+  color: var(--pcb-950);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+.splash-level.is-fused {
+  border-color: var(--bad);
+}

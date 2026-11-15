@@ -3,10 +3,11 @@ import { difficultyFor, specFor, utcDayIndex } from './day';
 import { generate, layerShapes } from './generate';
 import { evaluate, fullMask, isSolved, rowCount, validatePlacement } from './sim';
 import { solve } from './solve';
+import { LEVELS, type Level } from './types';
 
 const EPOCH = utcDayIndex(Date.parse('2026-11-16T00:00:00Z'));
-const make = (day: number, salt = '') =>
-  generate({ day, dayIndex: EPOCH + day - 1, salt });
+const make = (day: number, salt = '', level: Level = 'hard') =>
+  generate({ day, dayIndex: EPOCH + day - 1, level, salt });
 
 describe('layerShapes', () => {
   it('ends in the bulb count and keeps columns small', () => {
@@ -35,11 +36,13 @@ describe('generate', () => {
 
   it('passes every reject rule on 2,000 consecutive days', () => {
     for (let day = 1; day <= 2000; day++) {
-      const board = make(day);
-      const spec = specFor(difficultyFor(EPOCH + day - 1));
+     for (const level of LEVELS) {
+      const board = make(day, '', level);
+      const spec = specFor(difficultyFor(EPOCH + day - 1, level));
       const full = fullMask(board.inputs);
-      const label = `day ${day}`;
+      const label = `day ${day} ${level}`;
 
+      expect(board.level, label).toBe(level);
       expect(board.difficulty, label).toBe(spec.difficulty);
       expect(board.inputs, label).toBe(spec.inputs);
       expect(board.sockets.length, label).toBeGreaterThanOrEqual(spec.sockets[0]);
@@ -88,6 +91,14 @@ describe('generate', () => {
       expect(solutions.length, label).toBeGreaterThanOrEqual(1);
       expect(solutions.length, label).toBeLessThanOrEqual(spec.maxSolutions);
       expect(candidates, label).toBeGreaterThanOrEqual(spec.minCandidates);
+     }
     }
-  }, 60_000);
+  }, 120_000);
+
+  it('gives a day three different boards, with Overclock as Sunday\'s hard one', () => {
+    const sunday = 7; // EPOCH is a Monday
+    expect(LEVELS.map((l) => make(sunday, '', l).difficulty)).toEqual(['easy', 'medium', 'overclock']);
+    expect(LEVELS.map((l) => make(1, '', l).difficulty)).toEqual(['easy', 'medium', 'hard']);
+    expect(LEVELS.map((l) => make(1, '', l).inputs)).toEqual([2, 3, 3]);
+  });
 });

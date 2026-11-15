@@ -5,6 +5,7 @@ import { solve } from './solve';
 import {
   CHIP_TYPES,
   type ChipType,
+  type Level,
   type Socket,
   type SolvedBoard,
   type Source,
@@ -170,7 +171,7 @@ export const probeRowFor = (inputs: number): number => {
 const tryBoard = (
   rng: Rng,
   spec: DaySpec
-): Omit<SolvedBoard, 'day' | 'date'> | null => {
+): Omit<SolvedBoard, 'day' | 'date' | 'level'> | null => {
   const socketCount = rng.range(spec.sockets[0], spec.sockets[1]);
   const bulbCount = rng.range(spec.bulbs[0], spec.bulbs[1]);
   const shapes = layerShapes(socketCount, bulbCount);
@@ -260,19 +261,20 @@ const tryBoard = (
 export type GenerateOptions = {
   /** Sequential board number shown to players. */
   day: number;
-  /** UTC day index the board is for; sets the date and the weekday difficulty. */
+  /** UTC day index the board is for; sets the date (and Sunday's larger hard board). */
   dayIndex: number;
+  level: Level;
   /** Per-installation salt so different communities get different boards. */
   salt?: string;
 };
 
 /** Deterministically build the board for a day: same options, same board. */
-export const generate = ({ day, dayIndex, salt = '' }: GenerateOptions): SolvedBoard => {
-  const spec = specFor(difficultyFor(dayIndex));
-  const rng = createRng(hashSeed(`gatecrash:${salt}:${day}:${dayIndex}`));
+export const generate = ({ day, dayIndex, level, salt = '' }: GenerateOptions): SolvedBoard => {
+  const spec = specFor(difficultyFor(dayIndex, level));
+  const rng = createRng(hashSeed(`gatecrash:${salt}:${day}:${dayIndex}:${level}`));
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const board = tryBoard(rng, spec);
-    if (board) return { day, date: isoDate(dayIndex), ...board };
+    if (board) return { day, date: isoDate(dayIndex), level, ...board };
   }
-  throw new Error(`no board found for day ${day}`);
+  throw new Error(`no board found for day ${day} ${level}`);
 };

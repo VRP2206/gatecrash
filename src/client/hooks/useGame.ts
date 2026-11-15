@@ -197,6 +197,46 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     [fits, hand, locked, placement, put, tray]
   );
 
+  /** Drag-and-drop: seat `chip` in socket `to`, coming from the tray or from socket `from`. */
+  const drop = useCallback(
+    (chip: ChipType, from: number | null, to: number) => {
+      if (locked || from === to) return;
+      if (!fits(chip, to)) {
+        setNudge({ socket: to, at: Date.now() });
+        return;
+      }
+      if (from === null) {
+        const left = tray.find((k) => k.chip === chip)?.left ?? 0;
+        // Dropping onto a socket that already holds this chip frees one up.
+        if (left + (placement[to] === chip ? 1 : 0) <= 0) return;
+      }
+      journey.start();
+      setPlacement((now) => {
+        const next = [...now];
+        const displaced = next[to] ?? null;
+        next[to] = chip;
+        // Moving between sockets swaps when the displaced chip fits the old socket.
+        if (from !== null) next[from] = displaced && fits(displaced, from) ? displaced : null;
+        return next;
+      });
+      setHand(null);
+      setArmed(null);
+      setInspect(null);
+      setError(null);
+    },
+    [fits, journey, locked, placement, tray]
+  );
+
+  /** Take the chip out of a socket and return it to the tray. */
+  const lift = useCallback(
+    (socket: number) => {
+      if (locked) return;
+      setPlacement((now) => now.map((c, i) => (i === socket ? null : c)));
+      setInspect(null);
+    },
+    [locked]
+  );
+
   const clear = useCallback(() => {
     if (locked) return;
     setPlacement(empty);
@@ -286,6 +326,8 @@ export const useGame = ({ board, initial, session, journey }: Options) => {
     nudge,
     pick,
     tapSocket,
+    drop,
+    lift,
     clear,
     power,
     skip,

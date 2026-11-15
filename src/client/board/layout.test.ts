@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { utcDayIndex } from '../../shared/day';
 import { generate } from '../../shared/generate';
 import { TUTORIAL_BOARD } from '../../shared/tutorial';
+import { LEVELS } from '../../shared/types';
 import { PIN_LEN, SOCKET_H, layoutBoard, type Point } from './layout';
 
 const EPOCH = utcDayIndex(Date.parse('2026-11-16T00:00:00Z'));
@@ -43,9 +44,10 @@ describe('board layout', () => {
 
   it('keeps every part on the board and every wire out of every chip, for a year of boards', () => {
     for (let day = 1; day <= 365; day++) {
-      const board = generate({ day, dayIndex: EPOCH + day - 1 });
+     for (const level of LEVELS) {
+      const board = generate({ day, dayIndex: EPOCH + day - 1, level });
       const layout = layoutBoard(board);
-      const label = `day ${day}`;
+      const label = `day ${day} ${level}`;
       const half = layout.socketW / 2;
 
       for (const p of [...layout.switches, ...layout.sockets, ...layout.bulbs]) {
@@ -84,6 +86,7 @@ describe('board layout', () => {
           });
         }
       }
+     }
     }
   });
 });

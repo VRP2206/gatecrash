@@ -34,16 +34,12 @@ describe('day', () => {
     expect(dayNumber(mon + 11, mon)).toBe(12);
     expect(dayIndexOf(12, mon)).toBe(mon + 11);
   });
-  it('follows the weekly rhythm', () => {
-    expect([0, 1, 2, 3, 4, 5, 6].map((d) => difficultyFor(mon + d))).toEqual([
-      'easy',
-      'easy',
-      'medium',
-      'medium',
-      'hard',
-      'hard',
-      'overclock',
-    ]);
+  it('keeps levels steady through the week, with Overclock on Sunday', () => {
+    for (let d = 0; d < 7; d++) {
+      expect(difficultyFor(mon + d, 'easy')).toBe('easy');
+      expect(difficultyFor(mon + d, 'medium')).toBe('medium');
+      expect(difficultyFor(mon + d, 'hard')).toBe(d === 6 ? 'overclock' : 'hard');
+    }
   });
   it('counts down to midnight UTC', () => {
     expect(msUntilNextDay(Date.parse('2026-11-16T23:00:00Z'))).toBe(3_600_000);
@@ -101,14 +97,14 @@ describe('score', () => {
   it('builds a spoiler-free share line', () => {
     const base = { startedAt: 1000, endedAt: 49_000 };
     expect(
-      shareLine(12, { ...base, status: 'solved', attempts: [['AND'], ['OR']] })
-    ).toBe('Gatecrash #12 ⚡⚡▫▫▫ 0:48');
+      shareLine(12, 'hard', { ...base, status: 'solved', attempts: [['AND'], ['OR']] })
+    ).toBe('Gatecrash #12 Hard ⚡⚡▫▫▫ 0:48');
     expect(
-      shareLine(12, { ...base, status: 'solved', attempts: [['AND']] }, 7)
-    ).toBe('Gatecrash #12 ⚡▫▫▫▫ 0:48 · streak 7');
+      shareLine(12, 'easy', { ...base, status: 'solved', attempts: [['AND']] }, 7)
+    ).toBe('Gatecrash #12 Easy ⚡▫▫▫▫ 0:48 · streak 7');
     expect(
-      shareLine(3, { ...base, status: 'fused', attempts: [[], [], [], [], []] })
-    ).toBe('Gatecrash #3 ⚡⚡⚡⚡⚡ fuse blown');
+      shareLine(3, 'medium', { ...base, status: 'fused', attempts: [[], [], [], [], []] })
+    ).toBe('Gatecrash #3 Medium ⚡⚡⚡⚡⚡ fuse blown');
   });
   it('places a result among other players', () => {
     expect(beatPercent([0, 0, 0, 0, 0, 0], 0)).toBe(0);
@@ -121,25 +117,20 @@ describe('score', () => {
 
 describe('streak', () => {
   it('extends on consecutive live solves', () => {
-    let s = advanceStreak(NO_STREAK, 4, true);
+    let s = advanceStreak(NO_STREAK, 4);
     expect(s).toEqual({ current: 1, best: 1, lastSolvedDay: 4 });
-    s = advanceStreak(s, 5, true);
-    s = advanceStreak(s, 6, true);
+    s = advanceStreak(s, 5);
+    s = advanceStreak(s, 6);
     expect(s).toEqual({ current: 3, best: 3, lastSolvedDay: 6 });
   });
   it('restarts after a gap and remembers the best run', () => {
-    let s = { current: 5, best: 5, lastSolvedDay: 10 };
-    s = advanceStreak(s, 12, true);
+    const s = advanceStreak({ current: 5, best: 5, lastSolvedDay: 10 }, 12);
     expect(s).toEqual({ current: 1, best: 5, lastSolvedDay: 12 });
   });
-  it('ends on a blown fuse', () => {
-    const s = advanceStreak({ current: 5, best: 9, lastSolvedDay: 10 }, 11, false);
-    expect(s).toEqual({ current: 0, best: 9, lastSolvedDay: 10 });
-  });
-  it('ignores days at or before the last solve', () => {
+  it('counts a day once, however many of its boards are solved', () => {
     const s = { current: 5, best: 5, lastSolvedDay: 10 };
-    expect(advanceStreak(s, 10, true)).toBe(s);
-    expect(advanceStreak(s, 3, false)).toBe(s);
+    expect(advanceStreak(s, 10)).toBe(s);
+    expect(advanceStreak(s, 3)).toBe(s);
   });
   it('only shows a run that is still alive', () => {
     const s = { current: 5, best: 5, lastSolvedDay: 10 };

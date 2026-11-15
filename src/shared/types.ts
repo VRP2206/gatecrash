@@ -39,6 +39,18 @@ export type Socket = {
   inputs: Source[];
 };
 
+/** The three boards offered every day. */
+export type Level = 'easy' | 'medium' | 'hard';
+export const LEVELS: readonly Level[] = ['easy', 'medium', 'hard'];
+export const LEVEL_LABEL: Readonly<Record<Level, string>> = {
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+};
+export const asLevel = (value: unknown): Level | null =>
+  LEVELS.find((l) => l === value) ?? null;
+
+/** Generator recipe. Sunday's hard board uses the larger `overclock` recipe. */
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'overclock';
 
 /**
@@ -54,6 +66,7 @@ export type Board = {
   day: number;
   /** ISO date (UTC) the board belongs to, e.g. 2026-11-25. */
   date: string;
+  level: Level;
   difficulty: Difficulty;
   inputs: number;
   sockets: Socket[];

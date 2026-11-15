@@ -2,6 +2,7 @@
 import { generate } from '../src/shared/generate';
 import { solve } from '../src/shared/solve';
 import { utcDayIndex } from '../src/shared/day';
+import { LEVELS } from '../src/shared/types';
 import { renderBoard } from './ascii';
 
 const arg = (flag: string, fallback: string): string => {
@@ -15,8 +16,10 @@ const epoch = utcDayIndex(Date.parse(`${arg('epoch', '2026-11-16')}T00:00:00Z`))
 const salt = arg('salt', '');
 
 for (let day = first; day < first + count; day++) {
-  const board = generate({ day, dayIndex: epoch + day - 1, salt });
-  const { solutions, candidates } = solve(board);
-  console.log(renderBoard(board, solutions.length, candidates));
-  console.log('');
+  for (const level of LEVELS) {
+    const board = generate({ day, dayIndex: epoch + day - 1, level, salt });
+    const { solutions, candidates } = solve(board);
+    console.log(renderBoard(board, solutions.length, candidates));
+    console.log('');
+  }
 }
