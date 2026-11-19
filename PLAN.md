@@ -293,6 +293,11 @@ Direction: **a hobbyist's workbench at night.** Dark green-black PCB board, copp
 amber bulbs, cream silkscreen lettering. One display typeface with character for the title and
 numbers (monospaced or engineering-stencil feel, open licence), one plain readable face for everything else.
 
+Restyled 19 Nov to match vrp.dev and blog.vrp.dev ("Organic"): cream page, tan rounded cards, near-black
+ink, terracotta pill buttons, olive labels, Caprasimo headings over Figtree. The board stays a circuit
+board: an olive panel with cream silkscreen, ink-black chips and peach live traces. Endless mode is the
+same style after dark (ink-brown page, terracotta board, butter-yellow live traces).
+
 - All colours, spacing, radii, and durations live in `theme/tokens.css`. No raw hex values in components.
 - Traces are the animation: signal travels along the copper as a moving glow, not a generic progress bar.
 - Chips look like chips (body, notch, legs), each with its own small behaviour glyph.

@@ -33,7 +33,7 @@ const resetsIn = (ms: number): string => {
 const ahead = (level: number): string => {
   const next = nextStep(level);
   return next
-    ? `Level ${next.from}: ${next.note.charAt(0).toLowerCase()}${next.note.slice(1)}`
+    ? `Level ${next.from}: ${next.note}`
     : 'The boards stay this size from here, each with one right answer.';
 };
 

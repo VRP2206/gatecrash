@@ -114,7 +114,7 @@ export const ChipBody = ({ chip, x, y, w, h, fontSize }: BodyProps) => {
   const named = fontSize > 0;
   return (
     <g className="chip">
-      <rect className="chip-body" x={x - w / 2} y={y - h / 2} width={w} height={h} rx={2} />
+      <rect className="chip-body" x={x - w / 2} y={y - h / 2} width={w} height={h} rx={4} />
       <path className="chip-notch" d={`M${x - w / 2} ${y - 4}a4 4 0 0 1 0 8z`} />
       <ChipIcon chip={chip} x={x + 1} y={named ? y - h * 0.16 : y} scale={named ? h / 34 : h / 24} />
       {named && (

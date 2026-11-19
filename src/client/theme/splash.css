@@ -1,6 +1,6 @@
 /* Inline post. Tap-only: nothing here may capture scroll or swipe. */
 .splash-body {
-  background: var(--pcb-800);
+  background: var(--page);
   overflow: hidden;
 }
 
@@ -17,12 +17,19 @@
   isolation: isolate;
 }
 
+/* Background: a soft olive blob with a few traces running across it, like the site's portrait. */
 .splash-art {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: -1;
+}
+.art-blob {
+  fill: var(--accent-2-soft);
+}
+.art-blob-2 {
+  fill: var(--surface);
 }
 .art-traces path,
 .art-hot path {
@@ -31,29 +38,26 @@
   stroke-linejoin: round;
 }
 .art-traces path {
-  stroke: var(--copper-dim);
+  stroke: var(--accent-2);
   stroke-width: 4;
-  opacity: 0.55;
+  opacity: 0.22;
 }
 .art-hot path {
-  stroke: var(--copper-hot);
+  stroke: var(--accent);
   stroke-width: 4;
   stroke-dasharray: 46 520;
   animation: art-run 7s linear infinite;
-  filter: drop-shadow(0 0 5px var(--amber-glow));
 }
 .art-hot path:nth-child(2) {
   animation-delay: -3.5s;
 }
 .art-pads circle {
-  fill: var(--pcb-800);
-  stroke: var(--copper);
+  fill: var(--page);
+  stroke: var(--accent-2);
   stroke-width: 3;
 }
 .art-holes circle {
-  fill: var(--pcb-950);
-  stroke: var(--pcb-line);
-  stroke-width: 2;
+  display: none;
 }
 @keyframes art-run {
   from {
@@ -70,13 +74,12 @@
 .splash-title {
   margin: var(--s2) 0 var(--s3);
   font-size: var(--text-hero);
-  color: var(--silk);
-  text-shadow: 0 2px 0 var(--pcb-950);
+  color: var(--ink);
 }
 .splash-pitch {
   max-width: 19rem;
   font-size: var(--text-lg);
-  color: var(--silk);
+  color: var(--ink-2);
   text-wrap: balance;
 }
 
@@ -87,14 +90,12 @@
   gap: var(--s2);
 }
 .splash-streak {
-  padding: var(--s1) var(--s2);
+  padding: var(--s1) var(--s3);
   font-size: var(--text-sm);
-  font-weight: 600;
-  letter-spacing: var(--track);
-  text-transform: uppercase;
-  color: var(--pcb-950);
-  background: var(--silk);
-  border-radius: var(--r1);
+  font-weight: 700;
+  color: var(--page);
+  background: var(--ink);
+  border-radius: var(--pill);
 }
 .splash-play {
   min-width: 11rem;
@@ -102,10 +103,15 @@
   font-size: var(--text-2xl);
 }
 .splash-note {
-  color: var(--silk);
-  background: var(--pcb-800);
-  padding: 0 var(--s1);
+  padding: var(--s1) var(--s3);
   margin-left: calc(var(--s1) * -1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent-2-ink);
+  background: var(--surface-2);
+  border-radius: var(--pill);
 }
 
 @media (max-height: 340px) {
@@ -134,20 +140,18 @@
   gap: var(--s1);
 }
 .splash-level {
-  padding: 2px var(--s2);
+  padding: var(--s1) var(--s3);
   font-size: var(--text-sm);
-  font-weight: 600;
-  letter-spacing: var(--track);
-  text-transform: uppercase;
-  color: var(--silk);
-  background: var(--pcb-800);
-  border: var(--line) solid var(--pcb-line);
-  border-radius: var(--r1);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: var(--line) solid var(--rule);
+  border-radius: var(--pill);
 }
 .splash-level.is-solved {
-  color: var(--pcb-950);
-  background: var(--amber);
-  border-color: var(--amber);
+  color: var(--accent-2-ink);
+  background: var(--accent-2-soft);
+  border-color: transparent;
 }
 .splash-level.is-fused {
   border-color: var(--bad);

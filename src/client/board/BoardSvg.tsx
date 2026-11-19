@@ -81,8 +81,8 @@ export const BoardSvg = ({
       role="group"
       aria-label="Circuit board"
     >
-      <rect className="pcb" x={1} y={1} width={layout.width - 2} height={layout.height - 2} rx={6} />
-      <rect className="pcb-frame" x={6} y={6} width={layout.width - 12} height={layout.height - 12} rx={3} />
+      <rect className="pcb" x={1} y={1} width={layout.width - 2} height={layout.height - 2} rx={16} />
+      <rect className="pcb-frame" x={6} y={6} width={layout.width - 12} height={layout.height - 12} rx={11} />
       {[
         [13, 13],
         [layout.width - 13, 13],

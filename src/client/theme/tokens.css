@@ -1,78 +1,113 @@
 /*
- * Gatecrash design tokens: a hobbyist's workbench at night.
- * Every colour, size, radius and duration used anywhere in the client is defined here.
+ * Gatecrash design tokens. Every colour, size, radius and duration used in the client is defined here.
+ *
+ * The look follows vrp.dev and blog.vrp.dev ("Organic"): cream paper, tan cards, near-black ink,
+ * terracotta and olive accents, Caprasimo headings over Figtree, generous rounded corners.
+ *
+ * Two layers of colour:
+ *   page   --page, --surface*, --ink*, --rule, --accent*, --accent-2*   everything around the board
+ *   board  --pcb-*, --copper-*, --amber*, --silk*, --ic*, --tin*        the circuit board and its parts
  */
 :root {
-  /* board */
-  --pcb-950: #060e0a;
-  --pcb-900: #0a1711;
-  --pcb-800: #0c1a14;
-  --pcb-700: #11261c;
-  --pcb-600: #183427;
-  --pcb-500: #214636;
-  --pcb-line: #2c5a46;
+  /* ── page ── */
+  --page: #f5ead8;
+  --surface: #e9dcc5;
+  --surface-2: #f8f2e8;
+  --surface-3: #ddcdb1;
+  --rule: rgb(32 30 29 / 0.16);
+  --rule-strong: rgb(32 30 29 / 0.32);
 
-  /* copper traces */
-  --copper-dead: #4a3a2c;
-  --copper-dim: #8a5a35;
-  --copper: #c9853f;
-  --copper-hot: #ffc266;
+  --ink: #201e1d;
+  --ink-2: #474238;
+  --ink-3: #645c50;
 
-  /* light */
-  --amber: #ffb224;
-  --amber-deep: #c77a00;
-  --amber-glow: rgb(255 178 36 / 0.5);
-  --amber-haze: rgb(255 178 36 / 0.14);
+  /* terracotta: the one main action, and "yours" */
+  --accent: #c67139;
+  --accent-hover: #b2622d;
+  --accent-deep: #8c491a;
+  --accent-soft: #ffe1d0;
+  --accent-glow: rgb(198 113 57 / 0.35);
+  --on-accent: #fff7ec;
 
-  /* silkscreen */
-  --silk: #f1e8d0;
-  --silk-dim: #b3ad96;
-  --silk-faint: #8f9888;
+  /* olive: labels, the second voice */
+  --accent-2: #56633f;
+  --accent-2-soft: #e1eecc;
+  --accent-2-ink: #3d472b;
+  --on-accent-2: #f5ead8;
 
-  /* parts */
-  --ic: #16181b;
-  --ic-top: #23262b;
-  --ic-edge: #343a41;
-  --tin: #c3c7cc;
-  --tin-dim: #7c838a;
-
-  /* one hue per chip (shape differs too) */
-  --chip-both: #6fd3ff;
-  --chip-either: #9be37a;
-  --chip-differ: #ff9ad5;
-  --chip-flip: #f1e8d0;
-  --chip-notboth: #c9a6ff;
-  --chip-neither: #ff9d6b;
-
-  /* signals */
-  --ok: #86e09a;
-  --bad: #ff7a6b;
+  --ok: #4a7a35;
+  --bad: #b8432f;
   --bad-deep: #8f2f25;
 
-  /* paper (test report) */
-  --paper: #f3ecd8;
-  --paper-shade: #e2d8bd;
-  --ink: #1b2620;
-  --ink-soft: #55604f;
-  --ink-rule: #b9ae8f;
-  --stamp-pass: #1d6b3a;
-  --stamp-fail: #a3271b;
+  /* ── board: an olive panel with cream silkscreen ── */
+  --pcb-950: #232a17;
+  --pcb-900: #2e361f;
+  --pcb-800: #3d472b;
+  --pcb-700: #56633f;
+  --pcb-600: #66754b;
+  --pcb-500: #8a9a6c;
+  --pcb-line: #3d472b;
 
-  --shade: rgb(3 8 6 / 0.72);
-  --shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+  /* traces: pale olive when off, peach when live */
+  --copper-dead: #434d2e;
+  --copper-dim: #a9b98b;
+  --copper: #e0bf98;
+  --copper-hot: #ffcfa8;
+
+  /* light: lit bulbs and live switches */
+  --amber: #ffb36b;
+  --amber-deep: #a4521c;
+  --amber-glow: rgb(255 179 107 / 0.6);
+  --amber-haze: rgb(255 179 107 / 0.16);
+
+  /* silkscreen */
+  --silk: #f5ead8;
+  --silk-dim: #dfe3cc;
+  --silk-faint: #c4cda9;
+
+  /* parts: ink-black chips, cream tin */
+  --ic: #201e1d;
+  --ic-top: #2e2b25;
+  --ic-edge: #474238;
+  --tin: #efe5d3;
+  --tin-dim: #cfc6b2;
+
+  /* one hue per chip (shape differs too), read against the black chip body */
+  --chip-both: #8fd0ef;
+  --chip-either: #b9dc8c;
+  --chip-differ: #f6a6c8;
+  --chip-flip: #f5ead8;
+  --chip-notboth: #c7b0f5;
+  --chip-neither: #f6a06b;
+
+  /* paper (test report, coach marks) */
+  --paper: #fffaf2;
+  --paper-shade: #f3e9da;
+  --ink-soft: #645c50;
+  --ink-rule: #c0b6a5;
+  --stamp-pass: #4a6b2e;
+  --stamp-fail: #b0402a;
+
+  /* elevation: soft, ink-tinted */
+  --shade: rgb(32 30 29 / 0.55);
+  --shadow-sm: 0 1px 2px rgb(46 43 37 / 0.14);
+  --shadow-md: 0 3px 10px rgb(46 43 37 / 0.16);
+  --shadow: 0 12px 32px rgb(46 43 37 / 0.22);
 
   /* type */
-  --font-display: 'Big Shoulders Stencil', 'Arial Narrow', Impact, sans-serif;
-  --font-text: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Caprasimo', Georgia, 'Times New Roman', serif;
+  --font-text: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --text-xs: 0.6875rem;
   --text-sm: 0.8125rem;
   --text-md: 0.9375rem;
   --text-lg: 1.125rem;
   --text-xl: 1.5rem;
-  --text-2xl: 2.25rem;
-  --text-hero: clamp(2.75rem, 15vw, 5rem);
-  --track: 0.08em;
-  --track-wide: 0.16em;
+  --text-2xl: 2.125rem;
+  --text-hero: clamp(2.75rem, 14vw, 4.75rem);
+  --text-big: clamp(2.25rem, 11vw, 3.5rem);
+  --track: 0.06em;
+  --track-wide: 0.12em;
+  --track-tight: -0.015em;
 
   /* space */
   --s1: 4px;
@@ -83,10 +118,12 @@
   --s6: 32px;
   --tap: 44px;
 
-  /* shape: boards are angular, so radii stay small */
-  --r1: 2px;
-  --r2: 4px;
-  --r3: 8px;
+  /* shape: soft and round, like the site */
+  --r1: 6px;
+  --r2: 12px;
+  --r3: 20px;
+  --r4: 28px;
+  --pill: 999px;
   --line: 1px;
   --line-bold: 2px;
 
@@ -94,13 +131,14 @@
   --fast: 120ms;
   --base: 220ms;
   --slow: 480ms;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* time for a signal to cross one column of the board */
   --hop: 110ms;
 
   /* board drawing (SVG user units) */
   --trace: 3;
   --trace-hot: 3.6;
+  --board-r: 14;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -113,34 +151,62 @@
 }
 
 /*
- * Endless mode: the same bench under cold light. Indigo board, steel-blue
- * traces that run cyan when live. Only colours change; sizes and motion stay.
+ * Endless mode: the same style after dark. Ink-brown page, peach for the main
+ * action, and a terracotta board whose live traces run butter-yellow.
+ * Only colours change; sizes and motion stay.
  */
 :root[data-theme='endless'] {
-  --pcb-950: #06061a;
-  --pcb-900: #0b0b25;
-  --pcb-800: #0f0f2e;
-  --pcb-700: #181840;
-  --pcb-600: #222256;
-  --pcb-500: #2f2f70;
-  --pcb-line: #3b3b88;
+  --page: #1f1d1a;
+  --surface: #2e2b25;
+  --surface-2: #38342d;
+  --surface-3: #4a443a;
+  --rule: rgb(245 234 216 / 0.14);
+  --rule-strong: rgb(245 234 216 / 0.3);
 
-  --copper-dead: #33355c;
-  --copper-dim: #5a69a8;
-  --copper: #7f9cf0;
-  --copper-hot: #a5f4ff;
+  --ink: #f5ead8;
+  --ink-2: #dcd3c4;
+  --ink-3: #a99f8e;
 
-  --amber: #45e0ff;
-  --amber-deep: #1689b3;
-  --amber-glow: rgb(69 224 255 / 0.5);
-  --amber-haze: rgb(69 224 255 / 0.14);
+  --accent: #f6a06b;
+  --accent-hover: #ffb98c;
+  --accent-deep: #d67f48;
+  --accent-soft: #643312;
+  --accent-glow: rgb(246 160 107 / 0.4);
+  --on-accent: #201e1d;
 
-  --silk: #e9ecff;
-  --silk-dim: #aab1d8;
-  --silk-faint: #838bb8;
+  --accent-2: #aebf92;
+  --accent-2-soft: #3d472b;
+  --accent-2-ink: #ccdbb2;
+  --on-accent-2: #201e1d;
 
-  /* BOTH is cyan on the daily boards; here cyan is the live colour, so it turns gold. */
-  --chip-both: #ffc24a;
+  --ok: #9ad48a;
+  --bad: #ff8a73;
+  --bad-deep: #b8432f;
 
-  --shade: rgb(4 4 18 / 0.72);
+  --pcb-950: #2a150a;
+  --pcb-900: #3a1e0e;
+  --pcb-800: #4d2912;
+  --pcb-700: #6b3a1a;
+  --pcb-600: #7d4824;
+  --pcb-500: #a46a40;
+  --pcb-line: #3a1e0e;
+
+  --copper-dead: #4f2d16;
+  --copper-dim: #c48c62;
+  --copper: #f0c69c;
+  --copper-hot: #fff0b8;
+
+  --amber: #ffd66b;
+  --amber-deep: #8c5a00;
+  --amber-glow: rgb(255 214 107 / 0.6);
+  --amber-haze: rgb(255 214 107 / 0.16);
+
+  --silk: #f5ead8;
+  --silk-dim: #ead7c2;
+  --silk-faint: #d6b597;
+
+  --shade: rgb(10 8 6 / 0.7);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 3px 10px rgb(0 0 0 / 0.4);
+  --shadow: 0 12px 32px rgb(0 0 0 / 0.5);
 }
