@@ -70,6 +70,10 @@ export type DaySpec = {
   /** Two-wire chips the generator may use. FLIP is always allowed. */
   chips: readonly ChipType[];
   maxFlips: number;
+  /** Fewest columns of sockets; 1 allows boards where every chip drives a bulb. Default 2. */
+  minColumns?: number;
+  /** Boards must have at least this many FLIP sockets. Leave out for no minimum. */
+  minFlips?: number;
   /** Reject boards with more distinct winning placements than this. */
   maxSolutions: number;
   /** Reject boards with fewer legal placements than this (too easy to brute-force). */

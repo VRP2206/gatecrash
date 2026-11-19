@@ -1621,6 +1621,13 @@ body {
   font-size: var(--text-sm);
   color: var(--silk-dim);
 }
+.climb-new {
+  padding: var(--s1) var(--s2);
+  font-size: var(--text-sm);
+  color: var(--pcb-950);
+  background: var(--amber);
+  border-radius: var(--r1);
+}
 .climb-pips {
   width: 100%;
   display: grid;

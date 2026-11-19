@@ -44,7 +44,9 @@ post appears in the community every day at midnight UTC.
 
 Under the three daily boards is **Endless**: a weekly climb in its own colours, with no clock.
 
-- Level 1 is a warm-up. Every ten levels is a new stage and a step up. Levels 1-25 have two
+- The climb changes something every three to six levels: levels 1-3 are two chips matched to
+  two bulbs, then a third chip, then chips feeding chips, then FLIP, then two bulbs from one
+  circuit, and so on. The first board of each step says what is new. Levels 1-25 have two
   switches, 26-75 three, and from 76 four, which is where the hard boards begin.
 - Each stage comes with five charges. A failed test burns one; a test that clears the board is
   free. Burn all five and the fuse blows: you drop to the first level of the stage, on new boards.

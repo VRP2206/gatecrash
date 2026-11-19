@@ -6,8 +6,9 @@ import type { EndlessView } from './api';
 import type { Board, ChipType, FullPlacement, RowResult, SolvedBoard } from './types';
 
 /*
- * Endless mode: one climb per week. Level 1 is trivial and the boards grow in
- * stages of ten. A failed test burns one of the stage's charges; a test that
+ * Endless mode: one climb per week. Level 1 is trivial and the boards grow a
+ * step at a time (see STEPS). Charges come in stages of ten levels. A failed
+ * test burns one of the stage's charges; a test that
  * clears the board is free. Burn them all and the fuse blows: back to the
  * first level of the stage, on fresh boards. A new stage refills the charges.
  */
@@ -35,54 +36,107 @@ const ALL: readonly ChipType[] = ['AND', 'OR', 'XOR', 'NAND', 'NOR'];
 
 type Recipe = Omit<DaySpec, 'difficulty' | 'inputs'>;
 
-/** What a board looks like at each level. Every stage of ten is a step up. */
+/**
+ * One step of the climb: from level `from`, boards follow `recipes`, taking
+ * turns level by level so neighbouring boards look different. The first
+ * recipe shows off what is new, and `note` says what that is.
+ */
+export type Step = { from: number; note: string; recipes: readonly Recipe[] };
+
+const r = (
+  sockets: Recipe['sockets'],
+  decoys: Recipe['decoys'],
+  more: Partial<Recipe> = {}
+): Recipe => ({
+  sockets,
+  decoys,
+  bulbs: [1, 1],
+  chips: BASIC,
+  maxFlips: 1,
+  maxSolutions: 2,
+  minCandidates: 1,
+  ...more,
+});
+
+/*
+ * Two switches give only sixteen possible bulbs, so the early steps mix
+ * shapes: one column (each chip lights its own bulb), then chains, then FLIP.
+ */
+const MATCH_TWO = r([2, 2], [0, 0], { minColumns: 1, bulbs: [2, 2], maxFlips: 0, maxSolutions: 1, minCandidates: 2 });
+const MATCH_TWO_SPARE = r([2, 2], [1, 1], { minColumns: 1, bulbs: [2, 2], maxFlips: 0, maxSolutions: 1, minCandidates: 3 });
+const MATCH_THREE = r([3, 3], [0, 0], { minColumns: 1, bulbs: [3, 3], maxFlips: 0, maxSolutions: 1, minCandidates: 2 });
+const CHAIN_TWO_SPARE = r([2, 2], [1, 1], { maxFlips: 0, maxSolutions: 1, minCandidates: 3 });
+const CHAIN_THREE = r([3, 3], [0, 0], { bulbs: [1, 2], maxFlips: 0, minCandidates: 3 });
+const FLIP_THREE = r([3, 3], [1, 1], { bulbs: [1, 2], minFlips: 1, minCandidates: 4 });
+const CHAIN_THREE_SPARE = r([3, 3], [1, 1], { bulbs: [1, 2], maxFlips: 0, maxSolutions: 1, minCandidates: 6 });
+const TWO_BULBS = r([3, 3], [1, 1], { bulbs: [2, 2], minCandidates: 6 });
+const THREE_OR_FOUR = r([3, 4], [1, 2], { bulbs: [1, 2], minCandidates: 8 });
+const FOUR_SOCKETS = r([4, 4], [1, 2], { bulbs: [1, 2], minCandidates: 12 });
+
+/**
+ * The climb, step by step. Something changes every three to six levels; the
+ * bigger jumps land on stage starts and on the new switches at 26 and 76,
+ * where the boards ease off for a few levels while the card grows.
+ */
+export const STEPS: readonly Step[] = [
+  // two switches: four rows on the card
+  { from: 1, note: 'Each chip lights its own bulb. Match them to the card.', recipes: [MATCH_TWO] },
+  { from: 4, note: 'Three chips in the tray. Sometimes one does not belong.', recipes: [MATCH_TWO_SPARE, MATCH_THREE] },
+  { from: 7, note: 'Chips can feed other chips. Follow the wires.', recipes: [CHAIN_TWO_SPARE, CHAIN_THREE] },
+  { from: 11, note: 'FLIP joins: it turns on into off, and off into on.', recipes: [FLIP_THREE, CHAIN_THREE_SPARE] },
+  { from: 15, note: 'Two bulbs fed by one circuit.', recipes: [TWO_BULBS, THREE_OR_FOUR] },
+  { from: 21, note: 'A fourth socket, and up to two spare chips.', recipes: [FOUR_SOCKETS, THREE_OR_FOUR] },
+  // three switches: eight rows
+  {
+    from: 26,
+    note: 'A third switch: eight rows on the card. The boards ease off for a while.',
+    recipes: [
+      r([3, 3], [0, 0], { minColumns: 1, bulbs: [3, 3], maxFlips: 0, maxSolutions: 1, minCandidates: 2 }),
+      r([3, 3], [0, 0], { bulbs: [1, 2], minCandidates: 3 }),
+    ],
+  },
+  {
+    from: 31,
+    note: 'Four sockets.',
+    recipes: [
+      r([4, 4], [0, 0], { bulbs: [1, 2], minCandidates: 8 }),
+      r([3, 3], [1, 1], { bulbs: [1, 2], minCandidates: 6 }),
+    ],
+  },
+  { from: 36, note: 'A spare chip again.', recipes: [r([4, 4], [1, 1], { bulbs: [1, 2], minCandidates: 12 })] },
+  { from: 41, note: 'Up to five sockets.', recipes: [r([4, 5], [0, 1], { bulbs: [1, 2], minCandidates: 16 })] },
+  { from: 46, note: 'A spare chip on every board.', recipes: [r([4, 5], [1, 1], { bulbs: [1, 2], minCandidates: 20 })] },
+  { from: 51, note: 'Five sockets on every board.', recipes: [r([5, 5], [1, 1], { bulbs: [1, 2], maxFlips: 2, minCandidates: 30 })] },
+  { from: 56, note: 'Two bulbs on every board.', recipes: [r([5, 5], [1, 1], { bulbs: [2, 2], maxFlips: 2, minCandidates: 40 })] },
+  { from: 61, note: 'Up to six sockets and two spare chips.', recipes: [r([5, 6], [1, 2], { bulbs: [2, 2], maxFlips: 2, maxSolutions: 3, minCandidates: 60 })] },
+  { from: 66, note: 'Six sockets on every board.', recipes: [r([6, 6], [1, 2], { bulbs: [2, 2], maxFlips: 2, maxSolutions: 3, minCandidates: 75 })] },
+  { from: 71, note: 'Two spare chips on every board.', recipes: [r([6, 6], [2, 2], { bulbs: [2, 2], maxFlips: 2, maxSolutions: 3, minCandidates: 90 })] },
+  // four switches: sixteen rows, and the hard boards
+  { from: 76, note: 'A fourth switch: sixteen rows. The hard boards start here.', recipes: [r([5, 6], [1, 1], { bulbs: [2, 2], maxFlips: 2, maxSolutions: 3, minCandidates: 60 })] },
+  { from: 81, note: 'NOT BOTH and NEITHER can turn up from here.', recipes: [r([6, 7], [1, 2], { bulbs: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 3, minCandidates: 150 })] },
+  { from: 86, note: 'More ways to seat the chips.', recipes: [r([6, 7], [1, 2], { bulbs: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 3, minCandidates: 200 })] },
+  { from: 91, note: 'Seven sockets on every board.', recipes: [r([7, 7], [2, 2], { bulbs: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 3, minCandidates: 250 })] },
+  { from: 101, note: 'Fewer right answers per board.', recipes: [r([7, 7], [2, 3], { bulbs: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 2, minCandidates: 400 })] },
+  { from: 111, note: 'Up to eight sockets.', recipes: [r([7, 8], [3, 3], { bulbs: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 2, minCandidates: 600 })] },
+  { from: 121, note: 'One right answer per board from here on.', recipes: [r([8, 8], [3, 3], { bulbs: [2, 3], chips: ALL, maxFlips: 3, maxSolutions: 1, minCandidates: 600 })] },
+];
+
+/** The step a level belongs to. */
+export const stepAt = (level: number): Step => {
+  let step = STEPS[0];
+  for (const s of STEPS) if (s.from <= level) step = s;
+  if (!step) throw new Error('no steps');
+  return step;
+};
+
+/** The next step after this level's, or null at the top of the table. */
+export const nextStep = (level: number): Step | null => STEPS.find((s) => s.from > level) ?? null;
+
 const recipeAt = (level: number): Recipe => {
-  const stage = stageOf(level);
-  const inputs = switchesAt(level);
-  if (stage === 1) {
-    // The first three boards have only one way to seat the chips: a warm-up.
-    return { sockets: [2, 2], bulbs: [1, 1], decoys: [0, 0], chips: BASIC, maxFlips: 1, maxSolutions: 1, minCandidates: level <= 3 ? 1 : 2 };
-  }
-  if (stage === 2) {
-    return { sockets: [3, 3], bulbs: [1, 2], decoys: [0, 0], chips: BASIC, maxFlips: 1, maxSolutions: 2, minCandidates: 3 };
-  }
-  if (stage === 3) {
-    // Levels 26-30 add the third switch, so the board itself eases off.
-    return inputs === 2
-      ? { sockets: [3, 4], bulbs: [1, 2], decoys: [1, 1], chips: BASIC, maxFlips: 1, maxSolutions: 2, minCandidates: 6 }
-      : { sockets: [3, 3], bulbs: [1, 1], decoys: [0, 0], chips: BASIC, maxFlips: 1, maxSolutions: 2, minCandidates: 3 };
-  }
-  if (stage === 4) {
-    return { sockets: [4, 4], bulbs: [1, 2], decoys: [0, 0], chips: BASIC, maxFlips: 1, maxSolutions: 2, minCandidates: 8 };
-  }
-  if (stage === 5) {
-    return { sockets: [4, 5], bulbs: [1, 2], decoys: [0, 1], chips: BASIC, maxFlips: 1, maxSolutions: 2, minCandidates: 16 };
-  }
-  if (stage === 6) {
-    return { sockets: [5, 5], bulbs: [1, 2], decoys: [1, 1], chips: BASIC, maxFlips: 2, maxSolutions: 2, minCandidates: 30 };
-  }
-  if (stage === 7) {
-    return { sockets: [5, 6], bulbs: [2, 2], decoys: [1, 2], chips: BASIC, maxFlips: 2, maxSolutions: 3, minCandidates: 60 };
-  }
-  if (stage === 8) {
-    // Levels 76-80 add the fourth switch; this is where the hard boards begin.
-    return inputs === 3
-      ? { sockets: [6, 6], bulbs: [2, 2], decoys: [2, 2], chips: BASIC, maxFlips: 2, maxSolutions: 3, minCandidates: 90 }
-      : { sockets: [5, 6], bulbs: [2, 2], decoys: [1, 1], chips: BASIC, maxFlips: 2, maxSolutions: 3, minCandidates: 60 };
-  }
-  if (stage === 9) {
-    return { sockets: [6, 7], bulbs: [2, 3], decoys: [1, 2], chips: ALL, maxFlips: 2, maxSolutions: 3, minCandidates: 150 };
-  }
-  if (stage === 10) {
-    return { sockets: [7, 7], bulbs: [2, 3], decoys: [2, 2], chips: ALL, maxFlips: 2, maxSolutions: 3, minCandidates: 250 };
-  }
-  if (stage === 11) {
-    return { sockets: [7, 7], bulbs: [2, 3], decoys: [2, 3], chips: ALL, maxFlips: 2, maxSolutions: 2, minCandidates: 400 };
-  }
-  if (stage === 12) {
-    return { sockets: [7, 8], bulbs: [2, 3], decoys: [3, 3], chips: ALL, maxFlips: 2, maxSolutions: 2, minCandidates: 600 };
-  }
-  return { sockets: [8, 8], bulbs: [2, 3], decoys: [3, 3], chips: ALL, maxFlips: 3, maxSolutions: 1, minCandidates: 600 };
+  const { from, recipes } = stepAt(level);
+  const recipe = recipes[(level - from) % recipes.length];
+  if (!recipe) throw new Error(`no recipe for level ${level}`);
+  return recipe;
 };
 
 export const endlessSpec = (level: number): DaySpec => {

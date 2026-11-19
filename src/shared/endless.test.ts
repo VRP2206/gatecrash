@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   ENDLESS_CHARGES,
+  STAGE_LENGTH,
+  STEPS,
   endlessScore,
   endlessSpec,
   freshRun,
   gainedToday,
   generateEndless,
   msUntilNextWeek,
+  nextStep,
   powerRun,
   rollRun,
   stageOf,
   stageStart,
+  stepAt,
   switchesAt,
   weekIndexOf,
   weekStartDay,
@@ -64,13 +68,48 @@ describe('endless difficulty', () => {
     expect([1, 25, 26, 75, 76, 125, 126, 300].map(switchesAt)).toEqual([2, 2, 3, 3, 4, 4, 4, 4]);
   });
 
-  it('never gets easier to brute-force from one stage to the next, within a switch count', () => {
-    let last = { inputs: 0, floor: 0 };
-    for (let level = 1; level <= 200; level += 10) {
-      const spec = endlessSpec(level);
-      if (spec.inputs === last.inputs) expect(spec.minCandidates, `level ${level}`).toBeGreaterThanOrEqual(last.floor);
-      last = { inputs: spec.inputs, floor: spec.minCandidates };
-    }
+  it('steps up often, with a step at every stage start and every new switch', () => {
+    const starts = STEPS.map((step) => step.from);
+    expect(starts[0]).toBe(1);
+    expect([...starts].sort((x, y) => x - y)).toEqual(starts);
+    expect(starts).toContain(26);
+    expect(starts).toContain(76);
+    for (let level = 11; level <= 121; level += STAGE_LENGTH) expect(starts).toContain(level);
+    starts.forEach((from, i) => {
+      const next = starts[i + 1];
+      if (next !== undefined) expect(next - from, `step at ${from}`).toBeLessThanOrEqual(10);
+    });
+    for (const step of STEPS) expect(step.recipes.length, `step at ${step.from}`).toBeGreaterThan(0);
+  });
+
+  it('finds the step for a level, and the one after it', () => {
+    expect(stepAt(1).from).toBe(1);
+    expect(stepAt(3).from).toBe(1);
+    expect(stepAt(4).from).toBe(4);
+    expect(stepAt(999).from).toBe(STEPS.at(-1)?.from);
+    expect(nextStep(1)?.from).toBe(4);
+    expect(nextStep(25)?.from).toBe(26);
+    expect(nextStep(999)).toBeNull();
+  });
+
+  it('gets no easier from one step to the next while the switch count stays', () => {
+    let last = { inputs: 0, median: 0, from: 0 };
+    STEPS.forEach((step, i) => {
+      const to = (STEPS[i + 1]?.from ?? step.from + 10) - 1;
+      const ways: number[] = [];
+      for (let week = WEEK; week < WEEK + 6; week++) {
+        for (let level = step.from; level <= to; level++) {
+          ways.push(solve(generateEndless({ week, level, retry: 0 }), 1).candidates);
+        }
+      }
+      ways.sort((x, y) => x - y);
+      const median = ways[Math.floor(ways.length / 2)] ?? 0;
+      const inputs = switchesAt(step.from);
+      if (inputs === last.inputs) {
+        expect(median, `levels ${step.from}-${to} vs the step at ${last.from}`).toBeGreaterThanOrEqual(last.median);
+      }
+      last = { inputs, median, from: step.from };
+    });
   });
 
   it('builds a solvable board for every level up to 200, the same one each time', () => {
@@ -93,18 +132,50 @@ describe('endless difficulty', () => {
     }
   });
 
-  it('opens with boards that have a single way to seat the chips', () => {
-    for (let level = 1; level <= 3; level++) {
-      const board = generateEndless({ week: WEEK, level, retry: 0 });
-      expect(board.sockets).toHaveLength(2);
-      expect(board.tray).toHaveLength(2);
+  it('opens by matching chips to bulbs, with a different pair of chips from week to week', () => {
+    const pairs = new Set<string>();
+    for (let week = WEEK; week < WEEK + 10; week++) {
+      for (let level = 1; level <= 3; level++) {
+        const board = generateEndless({ week, level, retry: 0 });
+        expect(board.sockets).toHaveLength(2);
+        expect(board.sockets.every((s) => s.layer === 1)).toBe(true);
+        expect(board.bulbs).toHaveLength(2);
+        expect(board.tray).toHaveLength(2);
+        expect(solve(board, 9).solutions).toHaveLength(1);
+        pairs.add([...board.tray].sort().join());
+      }
     }
-    // From level 4 there is a choice, and only one way is right.
-    for (let level = 4; level <= 10; level++) {
-      const board = generateEndless({ week: WEEK, level, retry: 0 });
-      expect(solve(board, 9).solutions).toHaveLength(1);
-      expect(() => wrongFor(board)).not.toThrow();
+    expect(pairs.size).toBe(3);
+  });
+
+  it('brings in one new thing at a time over the first stages', () => {
+    const at = (level: number, week = WEEK) => generateEndless({ week, level, retry: 0 });
+    // 4-6: three chips; level 4 keeps two sockets, so one chip is spare.
+    expect(at(4).tray).toHaveLength(3);
+    expect(at(4).sockets).toHaveLength(2);
+    expect(at(5).tray).toHaveLength(3);
+    // 7-10: chips feed chips.
+    expect(Math.max(...at(7).sockets.map((s) => s.layer))).toBe(2);
+    // 11: FLIP is on the board.
+    for (let week = WEEK; week < WEEK + 5; week++) {
+      expect(at(11, week).sockets.some((s) => s.inputs.length === 1)).toBe(true);
     }
+    // 15: two bulbs.
+    expect(at(15).bulbs).toHaveLength(2);
+  });
+
+  it('mixes shapes so the early levels do not repeat', () => {
+    const trays = new Set<string>();
+    const wirings = new Set<string>();
+    for (let week = WEEK; week < WEEK + 10; week++) {
+      for (let level = 1; level <= 20; level++) {
+        const board = generateEndless({ week, level, retry: 0 });
+        trays.add([...board.tray].sort().join());
+        wirings.add(JSON.stringify([board.sockets, board.bulbs]));
+      }
+    }
+    expect(trays.size).toBeGreaterThanOrEqual(15);
+    expect(wirings.size).toBeGreaterThanOrEqual(30);
   });
 });
 

@@ -200,6 +200,8 @@ Changes after the second hands-on test (15 Nov): wires are routed on a grid, one
 
 Endless mode (15 Nov): a weekly climb, reset Monday 00:00 UTC, same boards for everyone, in its own cold-light colour theme. Levels 1-25 have 2 switches, 26-75 have 3, 76 onward have 4; every stage of ten levels is a step up and the hard boards start around level 80 (recipes in `src/shared/endless.ts`). Nothing is timed. A failed test burns one of five charges per stage; a clearing test is free; a new stage refills. Burn all five and the fuse blows: back to the first level of the stage on fresh boards. Two leaderboards: new levels reached today, and highest level cleared this week. Logged-out players climb in their browser with no leaderboard. `npm run endless` plays it end to end and saves screenshots to `docs/shots/endless/`.
 
+Endless rework (19 Nov), after the first test: levels 1-10 were dull (every board had the same two chips and two ways to seat them). The curve is now a table of steps (`STEPS` in `src/shared/endless.ts`), one every three to six levels, each adding one thing and naming it on its first board and on the hub. Steps on two switches mix two recipes, alternating level by level, because two switches allow only sixteen different bulbs. New generator options for this, used only by endless: `minColumns: 1` (each chip drives its own bulb) and `minFlips`. Daily boards are unchanged.
+
 Dates assume evenings + weekends. Each phase ends with something uploaded and playable.
 **Rule for every phase:** `npm run check` (typecheck + lint + tests) passes before moving on,
 and the game is opened on a real phone in the Reddit app at least once.

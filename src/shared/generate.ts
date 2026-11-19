@@ -17,11 +17,14 @@ const FLIP_CHANCE = 0.18;
 const SKIP_CHANCE = 0.3;
 const MAX_ATTEMPTS = 20_000;
 
-/** Every way to split `sockets` into 2-3 columns of 1-3, ending in exactly `bulbs`. */
-export const layerShapes = (sockets: number, bulbs: number): number[][] => {
+/**
+ * Every way to split `sockets` into `minColumns`-3 columns of 1-3, ending in
+ * exactly `bulbs`. A single column means every chip drives its own bulb.
+ */
+export const layerShapes = (sockets: number, bulbs: number, minColumns = 2): number[][] => {
   const shapes: number[][] = [];
   const walk = (left: number, shape: number[]): void => {
-    if (left === bulbs && shape.length >= 1 && shape.length < MAX_LAYERS) {
+    if (left === bulbs && shape.length >= minColumns - 1 && shape.length < MAX_LAYERS) {
       shapes.push([...shape, bulbs]);
     }
     if (shape.length >= MAX_LAYERS - 1) return;
@@ -174,12 +177,15 @@ const tryBoard = (
 ): Omit<SolvedBoard, 'day' | 'date' | 'level'> | null => {
   const socketCount = rng.range(spec.sockets[0], spec.sockets[1]);
   const bulbCount = rng.range(spec.bulbs[0], spec.bulbs[1]);
-  const shapes = layerShapes(socketCount, bulbCount);
+  const shapes = layerShapes(socketCount, bulbCount, spec.minColumns);
   if (shapes.length === 0) return null;
   const shape = rng.pick(shapes);
 
   const wired = wire(rng, spec.inputs, shape, spec);
   if (!wired) return null;
+  if (spec.minFlips && wired.filter((s) => s.inputs.length === 1).length < spec.minFlips) {
+    return null;
+  }
   const sockets = untangle(spec.inputs, wired);
 
   const solution: ChipType[] = sockets.map((socket) =>

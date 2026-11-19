@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EndlessView } from '../../shared/api';
-import { ENDLESS_CHARGES, STAGE_LENGTH, stageStart, switchesAt } from '../../shared/endless';
+import {
+  ENDLESS_CHARGES,
+  STAGE_LENGTH,
+  nextStep,
+  stageStart,
+  stepAt,
+  switchesAt,
+} from '../../shared/endless';
 import { NEW_DAY_STATE } from '../../shared/types';
 import { Charges } from '../board/Charges';
 import { Chevron } from '../board/icons';
@@ -24,9 +31,18 @@ const resetsIn = (ms: number): string => {
 
 /** What changes next on the climb, in one line. */
 const ahead = (level: number): string => {
-  if (level <= 25) return 'A third switch joins at level 26.';
-  if (level <= 75) return 'A fourth switch joins at level 76. The hard boards start there.';
-  return 'Four switches from here on. Boards keep growing every ten levels.';
+  const next = nextStep(level);
+  return next
+    ? `Level ${next.from}: ${next.note.charAt(0).toLowerCase()}${next.note.slice(1)}`
+    : 'The boards stay this size from here, each with one right answer.';
+};
+
+/** e.g. "2 switches · 3 sockets · 1 spare chip". */
+const describe = (view: EndlessView): string => {
+  const spare = view.board.tray.length - view.board.sockets.length;
+  const parts = [`${switchesAt(view.level)} switches`, `${view.board.sockets.length} sockets`];
+  if (spare > 0) parts.push(`${spare} spare ${spare === 1 ? 'chip' : 'chips'}`);
+  return parts.join(' · ');
 };
 
 /** Endless mode: its own colours, a hub, the climb itself and its leaderboards. */
@@ -86,6 +102,8 @@ export const Endless = ({ loggedIn, journey, onBack, onHelp }: Props) => {
   if (sub === 'leaders') return <EndlessLeaders onBack={() => setSub('hub')} />;
 
   const first = stageStart(view.level);
+  const step = stepAt(view.level);
+  const fresh = view.level === step.from ? step.note : null;
   if (sub === 'play') {
     return (
       <Play
@@ -100,6 +118,7 @@ export const Endless = ({ loggedIn, journey, onBack, onHelp }: Props) => {
         elapsedAtOpen={0}
         endless={{
           burnedAtOpen: view.burned,
+          intro: fresh,
           solved: `Level ${view.level} cleared.`,
           fused: `Fuse blown. Back to level ${first}, on new boards.`,
           next: 'Next level',
@@ -129,9 +148,8 @@ export const Endless = ({ loggedIn, journey, onBack, onHelp }: Props) => {
       <section className="climb" aria-label={`Level ${view.level}, stage ${view.stage}`}>
         <span className="silk">Stage {view.stage}</span>
         <span className="display climb-level">Level {view.level}</span>
-        <span className="climb-blurb">
-          {switchesAt(view.level)} switches · {view.board.sockets.length} sockets
-        </span>
+        <span className="climb-blurb">{describe(view)}</span>
+        {fresh && <span className="climb-new">New: {fresh}</span>}
         <span className="climb-pips" aria-hidden="true">
           {Array.from({ length: STAGE_LENGTH }, (_, i) => (
             <span key={i} className={i < done ? 'is-done' : i === done ? 'is-now' : ''} />
@@ -165,9 +183,8 @@ export const Endless = ({ loggedIn, journey, onBack, onHelp }: Props) => {
       </button>
 
       <ul className="climb-rules">
-        <li>Clear a board to move up. Nothing is timed.</li>
-        <li>A failed test burns a charge. Burn all five and you drop to the start of the stage.</li>
-        <li>Every tenth level starts a new stage and refills the charges.</li>
+        <li>Nothing is timed. A failed test burns a charge.</li>
+        <li>Run out and you drop to the start of the stage. Each new stage refills them.</li>
         <li>{ahead(view.level)}</li>
       </ul>
 

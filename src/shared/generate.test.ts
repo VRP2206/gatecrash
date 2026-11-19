@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { difficultyFor, specFor, utcDayIndex } from './day';
-import { generate, layerShapes } from './generate';
+import { generate, generateFrom, layerShapes } from './generate';
 import { evaluate, fullMask, isSolved, rowCount, validatePlacement } from './sim';
 import { solve } from './solve';
 import { LEVELS, type Level } from './types';
@@ -18,6 +18,36 @@ describe('layerShapes', () => {
       expect(shape.length).toBeLessThanOrEqual(3);
       expect(Math.max(...shape)).toBeLessThanOrEqual(3);
     }
+  });
+
+  it('allows a single column only when asked', () => {
+    expect(layerShapes(2, 2)).toEqual([]);
+    expect(layerShapes(2, 2, 1)).toEqual([[2]]);
+    expect(layerShapes(3, 3, 1)).toEqual([[3]]);
+    expect(layerShapes(3, 1, 1)).toEqual(layerShapes(3, 1));
+  });
+});
+
+describe('generateFrom', () => {
+  const spec = { ...specFor('easy'), sockets: [3, 3] as const, decoys: [1, 1] as const };
+
+  it('builds single-column boards where every chip drives a bulb', () => {
+    const board = generateFrom('one-column', { ...spec, sockets: [2, 2], bulbs: [2, 2], decoys: [0, 0], minColumns: 1, minCandidates: 2 });
+    expect(board).not.toBeNull();
+    expect(board?.sockets.every((s) => s.layer === 1)).toBe(true);
+    expect(board?.bulbs).toEqual([0, 1]);
+  });
+
+  it('puts in at least the asked-for number of FLIP sockets', () => {
+    for (let i = 0; i < 20; i++) {
+      const board = generateFrom(`flip-${i}`, { ...spec, maxFlips: 1, minFlips: 1 });
+      expect(board?.sockets.filter((s) => s.inputs.length === 1)).toHaveLength(1);
+    }
+  });
+
+  it('returns null when no board fits the recipe', () => {
+    // Every bulb needs its own socket.
+    expect(generateFrom('impossible', { ...spec, sockets: [1, 1], bulbs: [2, 2] })).toBeNull();
   });
 });
 

@@ -7,16 +7,17 @@
  *      fails tests, blows a fuse, then jumps to later stages. Every board must
  *      fit the screen. Screenshots land in docs/shots/endless/.
  */
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { chromium, type Page } from 'playwright';
 import type { EndlessPowerResponse, EndlessView } from '../src/shared/api';
-import { endlessSpec, stageStart } from '../src/shared/endless';
+import { STEPS, endlessSpec, stageStart, stepAt } from '../src/shared/endless';
 import { solve } from '../src/shared/solve';
 import { CHIP_INFO, type Board, type ChipType, type FullPlacement } from '../src/shared/types';
 import { startDevServer } from './dev/server';
 
 const OUT = path.resolve('docs/shots/endless');
+rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 const problems: string[] = [];
 
@@ -88,7 +89,7 @@ const botClimb = async (url: string, top: number) => {
     if (result.view.level === stageStart(result.view.level) && result.view.burned !== 0) {
       problems.push(`bot: charges not refilled entering level ${result.view.level}`);
     }
-    const key = Math.floor((level - 1) / 10) * 10 + board.inputs / 10;
+    const key = stepAt(level).from;
     const t = stages.get(key) ?? { from: level, boards: 0, sockets: 0, tray: 0, ways: 0, ms: 0 };
     t.boards++;
     t.sockets += board.sockets.length;
@@ -99,12 +100,13 @@ const botClimb = async (url: string, top: number) => {
     now = result.view;
   }
   console.log(`Bot climbed to level ${now.level - 1} (best ${now.best}, today +${now.today}).`);
-  console.log('levels     switches  sockets  chips in tray  ways to seat them');
+  console.log('levels     switches  sockets  chips in tray  ways to seat them  what is new');
   for (const [key, t] of [...stages].sort((a, b) => a[0] - b[0])) {
     const to = t.from + t.boards - 1;
-    const sw = Math.round((key % 1) * 10);
+    const sw = endlessSpec(key).inputs;
+    const note = STEPS.find((s) => s.from === key)?.note ?? '';
     console.log(
-      `${`${t.from}-${to}`.padEnd(10)} ${String(sw).padEnd(9)} ${(t.sockets / t.boards).toFixed(1).padEnd(8)} ${(t.tray / t.boards).toFixed(1).padEnd(14)} ${Math.round(t.ways / t.boards)}`
+      `${`${t.from}-${to}`.padEnd(10)} ${String(sw).padEnd(9)} ${(t.sockets / t.boards).toFixed(1).padEnd(8)} ${(t.tray / t.boards).toFixed(1).padEnd(14)} ${String(Math.round(t.ways / t.boards)).padEnd(18)} ${note}`
     );
   }
   if (now.best !== top) problems.push(`bot: expected best ${top}, got ${now.best}`);
@@ -121,6 +123,9 @@ const shot = async (page: Page, name: string, fit = false) => {
     const out: string[] = [];
     if (el.scrollHeight > window.innerHeight + 1) out.push(`page is ${el.scrollHeight}px tall`);
     if (el.scrollWidth > window.innerWidth + 1) out.push(`page is ${el.scrollWidth}px wide`);
+    for (const node of document.querySelectorAll('.page')) {
+      if (node.scrollHeight > node.clientHeight + 1) out.push(`${node.className} scrolls`);
+    }
     for (const node of document.querySelectorAll('.play > *, .tray-chip, .card-row')) {
       const r = node.getBoundingClientRect();
       if (r.right > window.innerWidth + 1 || r.bottom > window.innerHeight + 1 || r.left < -1) {
@@ -180,7 +185,7 @@ const main = async () => {
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'endless') {
       problems.push('endless theme not applied');
     }
-    await shot(page, '02-hub-new-climb');
+    await shot(page, '02-hub-new-climb', true);
     await page.locator('.climb-go').click();
     await page.waitForSelector('.play');
     await shot(page, '03-level-1-empty', true);
@@ -193,6 +198,7 @@ const main = async () => {
       if (!(await title()).toLowerCase().includes(`level ${view.level}`)) {
         problems.push(`header says "${await title()}" on level ${view.level}`);
       }
+      if (view.fuses === 0) await shot(page, `06-early-level-${String(view.level).padStart(2, '0')}`, true);
       const misses =
         view.level === 4 && view.fuses === 0 ? 1 : view.level >= 11 && view.fuses === 0 ? 2 : 0;
       let fused = false;
@@ -238,7 +244,7 @@ const main = async () => {
     // Leave for the hub mid-stage, then come back.
     await page.locator('.icon-btn[aria-label="Endless overview"]').click();
     await page.waitForSelector('.endless');
-    await shot(page, '12-hub-mid-climb');
+    await shot(page, '12-hub-mid-climb', true);
 
     // Later stages: jump there, check the board fits, clear it through the UI.
     for (const level of [21, 26, 41, 61, 71, 76, 81, 95, 110, 125, 140]) {
@@ -247,7 +253,7 @@ const main = async () => {
       await page.waitForSelector('.levels');
       await page.locator('.level-endless').click();
       await page.waitForSelector('.endless');
-      if (level === 76) await shot(page, '13-hub-level-76');
+      if (level === 76) await shot(page, '13-hub-level-76', true);
       await page.locator('.climb-go').click();
       await page.waitForSelector('.play');
       const view = await current();
@@ -313,7 +319,7 @@ const main = async () => {
     }
     await page.locator('.icon-btn[aria-label="Endless overview"]').click();
     await page.waitForSelector('.endless');
-    await shot(page, '40-guest-hub');
+    await shot(page, '40-guest-hub', true);
     const guest = await page.evaluate(() => window.localStorage.getItem('gatecrash:endless'));
     if (!guest || JSON.parse(guest).level !== 4) problems.push(`guest climb not saved: ${guest}`);
 

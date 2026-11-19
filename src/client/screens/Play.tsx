@@ -29,7 +29,17 @@ type Props = {
   /** Practice mode: coach marks, no clock. */
   coach?: boolean;
   /** Endless mode: no clock, charges carry across boards, own wording. */
-  endless?: { burnedAtOpen: number; solved: string; fused: string; next: string; retry: string } | undefined;
+  endless?:
+    | {
+        burnedAtOpen: number;
+        /** What is new on this board, shown until the first chip goes in. */
+        intro: string | null;
+        solved: string;
+        fused: string;
+        next: string;
+        retry: string;
+      }
+    | undefined;
   onReport: (state: DayState) => void;
   onHelp?: () => void;
   onMenu?: () => void;
@@ -79,6 +89,7 @@ const statusLine = (game: Game, coach: boolean, endless: Props['endless']): stri
       : 'This row fails. Swap chips and watch the bulbs.';
   }
   const empty = board.sockets.length - game.placement.filter(Boolean).length;
+  if (empty === board.sockets.length && endless?.intro && !game.tested) return `New: ${endless.intro}`;
   if (empty === board.sockets.length) return 'Drag a chip onto a socket, or tap one then the other.';
   return `${empty} ${empty === 1 ? 'socket' : 'sockets'} to fill.`;
 };
